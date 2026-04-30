@@ -1,0 +1,104 @@
+﻿.right-sidebar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 18rem;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+    position: sticky;
+    top: 5rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #ffffff, #eef4ff);
+    border: 1px solid #d8e2f3;
+    box-shadow: 0 14px 30px rgba(39, 72, 121, 0.12);
+}
+
+.right-sidebar__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    text-align: center;
+    color: #6d7c98;
+}
+
+.right-sidebar__empty-icon,
+.right-sidebar__type-icon {
+    font-size: 2.6rem;
+    line-height: 1;
+}
+
+.right-sidebar__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.right-sidebar__header > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.right-sidebar__resource-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.right-sidebar__close {
+    border: 0;
+    background: transparent;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0;
+}
+
+.right-sidebar__stats {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+}
+
+.right-sidebar__stats div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #d8e2f3;
+}
+
+.right-sidebar__stats dt,
+.right-sidebar__stats dd {
+    margin: 0;
+}
+
+.right-sidebar__stats dt {
+    font-size: 1.15rem;
+    color: #5b6880;
+}
+
+.right-sidebar__stats dd {
+    font-weight: 700;
+    color: #1f2a44;
+}
+
+.right-sidebar__upgrade {
+    min-height: 3.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+    .right-sidebar {
+        position: static;
+    }
+}
+

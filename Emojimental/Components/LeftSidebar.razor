@@ -1,0 +1,107 @@
+﻿@implements IDisposable
+@inject GameState GameState
+
+<aside class="left-sidebar">
+    <section class="left-sidebar__section">
+        <div class="left-sidebar__section-header" aria-label="Deploy">
+            <span class="left-sidebar__section-icon" aria-hidden="true">📦</span>
+            <span class="left-sidebar__badge">@GameState.FieldObjects.Count</span>
+        </div>
+
+        @foreach (var boxType in DeployTypes)
+        {
+            <article class="left-sidebar__card left-sidebar__card--@boxType.CssModifier()">
+                <div class="left-sidebar__card-header">
+                    <div class="left-sidebar__card-emoji" aria-hidden="true">
+                        <div class="left-sidebar__icon">@boxType.Icon()</div>
+                        <div class="left-sidebar__resource-icon">@boxType.ProducedResourceIcon()</div>
+                    </div>
+                    <span class="left-sidebar__count">@GameState.CountFieldObjects(boxType)</span>
+                </div>
+
+                <div class="left-sidebar__actions">
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="() => OnAddFieldObject(boxType)"
+                            aria-label="Add @boxType.DisplayName()">
+                        ➕
+                    </button>
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="() => OnRemoveFieldObject(boxType)"
+                            disabled="@(!GameState.CanRemoveFieldObject(boxType))"
+                            aria-label="Remove @boxType.DisplayName()">
+                        ➖
+                    </button>
+                </div>
+            </article>
+        }
+    </section>
+
+    <section class="left-sidebar__section left-sidebar__section--bottom">
+        <div class="left-sidebar__section-header" aria-label="Passive upgrades">
+            <span class="left-sidebar__section-icon" aria-hidden="true">☃️</span>
+        </div>
+
+        <article class="left-sidebar__card left-sidebar__card--passive">
+            <div class="left-sidebar__card-header">
+                <div class="left-sidebar__card-emoji" aria-hidden="true">
+                    <div class="left-sidebar__icon">☃️</div>
+                    <div class="left-sidebar__resource-icon">💰</div>
+                </div>
+                <span class="left-sidebar__count">@GameState.SnowmanCount</span>
+            </div>
+
+            <dl class="left-sidebar__summary left-sidebar__summary--compact">
+                <div aria-label="Snowman cost">
+                    <dt>🧊</dt>
+                    <dd>@GameState.GetSnowmanCost().Display()</dd>
+                </div>
+                <div aria-label="Snowman income">
+                    <dt>💰⏱️</dt>
+                    <dd>@GameState.SnowmanIncomePerSecond.Display()</dd>
+                </div>
+            </dl>
+
+            <button type="button"
+                    class="btn btn-primary left-sidebar__wide-button"
+                    @onclick="OnHireSnowman"
+                    disabled="@(!GameState.CanHireSnowman())"
+                    aria-label="Build snowman">
+                ➕☃️
+            </button>
+        </article>
+    </section>
+</aside>
+
+@code {
+    private static readonly FieldNodeType[] DeployTypes =
+    [
+        FieldNodeType.Snow,
+        FieldNodeType.Energy
+    ];
+
+    protected override void OnInitialized()
+    {
+        GameState.Changed += OnGameStateChanged;
+    }
+
+    private void OnAddFieldObject(FieldNodeType type)
+        => GameState.AddFieldObject(type);
+
+    private void OnRemoveFieldObject(FieldNodeType type)
+        => GameState.RemoveFieldObject(type);
+
+    private void OnHireSnowman()
+        => GameState.HireSnowman();
+
+    private void OnGameStateChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        GameState.Changed -= OnGameStateChanged;
+    }
+}
+
+

@@ -1,0 +1,78 @@
+﻿@implements IDisposable
+@inject GameState GameState
+
+<aside class="right-sidebar">
+    @if (GameState.SelectedFieldObject is null)
+    {
+        <div class="right-sidebar__empty" aria-label="No box selected">
+            <span class="right-sidebar__empty-icon">🧰</span>
+        </div>
+    }
+    else
+    {
+        var fieldObject = GameState.SelectedFieldObject;
+
+        <div class="right-sidebar__header">
+            <div aria-hidden="true">
+                <div class="right-sidebar__type-icon">@fieldObject.Icon</div>
+                <div class="right-sidebar__resource-icon">@fieldObject.ResourceIcon</div>
+            </div>
+
+            <button type="button"
+                    class="right-sidebar__close"
+                    @onclick="OnClose"
+                    aria-label="Close box details">
+                ✖️
+            </button>
+        </div>
+
+        <button type="button"
+                class="btn btn-primary right-sidebar__upgrade"
+                @onclick="OnUpgrade"
+                disabled="@(!GameState.CanUpgradeSelectedFieldObject())"
+                aria-label="Upgrade @fieldObject.TypeDisplayName">
+            ⬆️ ⚡ @fieldObject.UpgradeCostDisplay()
+        </button>
+
+        <dl class="right-sidebar__stats">
+            <div aria-label="Level">
+                <dt>⭐</dt>
+                <dd>@fieldObject.Level</dd>
+            </div>
+            <div aria-label="Value">
+                <dt>@fieldObject.ResourceIcon</dt>
+                <dd>@fieldObject.ValueDisplay()</dd>
+            </div>
+            <div aria-label="Cooldown">
+                <dt>⏱️</dt>
+                <dd>@fieldObject.CooldownDisplay()</dd>
+            </div>
+            <div aria-label="Upgrade cost">
+                <dt>⚡</dt>
+                <dd>@fieldObject.UpgradeCostDisplay()</dd>
+            </div>
+        </dl>
+    }
+</aside>
+
+@code {
+    protected override void OnInitialized()
+    {
+        GameState.Changed += OnGameStateChanged;
+    }
+
+    private void OnUpgrade()
+        => GameState.UpgradeSelectedFieldObject();
+
+    private void OnClose()
+        => GameState.SelectFieldObject(null);
+
+    private void OnGameStateChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        GameState.Changed -= OnGameStateChanged;
+    }
+}
+

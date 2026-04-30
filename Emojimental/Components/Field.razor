@@ -1,0 +1,231 @@
+﻿@using System.Globalization
+@implements IDisposable
+@implements IAsyncDisposable
+@inject GameState GameState
+@inject IJSRuntime JS
+
+<div class="field-shell">
+    <div class="field-surface"
+         @ref="_surface"
+         style="width:@FieldWidthPx; height:@FieldHeightPx;"
+         @onclick="OnSurfaceClick"
+         @onpointermove="OnPointerMove"
+         @onpointerup="OnPointerUp"
+         @onpointercancel="OnPointerUp"
+         @onpointerleave="OnPointerLeave">
+        @if (GameState.FieldObjects.Count == 0)
+        {
+            <div class="field-empty-state" aria-label="Deploy your first box">
+                <span aria-hidden="true">📦</span>
+            </div>
+        }
+
+        @foreach (var beam in GameState.AlignmentBeams)
+        {
+            <div class="field-beam @(beam.IsHorizontal ? "field-beam--horizontal" : "field-beam--vertical")"
+                 style="@BuildBeamStyle(beam)"></div>
+        }
+
+        @foreach (var fieldObject in GameState.FieldObjects)
+        {
+            <div class="@GetFieldObjectClasses(fieldObject)"
+                 style="@BuildFieldObjectStyle(fieldObject)"
+                 @onpointerdown="@(args => OnPointerDownAsync(fieldObject, args))"
+                 @onpointerdown:preventDefault="true"
+                 @onclick:stopPropagation="true"
+                 aria-label="Open @fieldObject.TypeDisplayName details">
+                <div class="field-node__stats field-node__stats--top">
+                    <span>@fieldObject.ResourceIcon @fieldObject.ValueDisplay()</span>
+                </div>
+
+                <div class="field-node__progress" aria-label="@fieldObject.TypeDisplayName progress">
+                    <div class="field-node__progress-fill"
+                         style="width:@FormatPercent(fieldObject.ProgressPercent)"></div>
+                </div>
+
+                <div class="field-node__core">
+                    <span>@fieldObject.Icon</span>
+                </div>
+
+                <div class="field-node__stats field-node__stats--bottom">
+                    <span>⭐ @fieldObject.Level</span>
+                    <span>⏱️ @fieldObject.CooldownDisplay()</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const double DragThreshold = 6d;
+
+    private ElementReference _surface;
+    private DotNetObjectReference<Field>? _selfReference;
+    private DragState? _dragState;
+    private bool _isObservingSurface;
+    private bool _suppressSurfaceClick;
+    private bool _disposed;
+
+    private string FieldWidthPx => $"{GameState.FieldWidth.ToString("F0", CultureInfo.InvariantCulture)}px";
+    private string FieldHeightPx => $"{GameState.FieldHeight.ToString("F0", CultureInfo.InvariantCulture)}px";
+
+    protected override void OnInitialized()
+    {
+        GameState.Changed += OnGameStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _selfReference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("emojimentalField.observeSize", _surface, _selfReference);
+        _isObservingSurface = true;
+    }
+
+    private async Task OnPointerDownAsync(FieldNode fieldObject, PointerEventArgs args)
+    {
+        var bounds = await JS.InvokeAsync<FieldBounds>("emojimentalField.getBounds", _surface);
+        GameState.BeginFieldObjectDrag(fieldObject.Id);
+        GameState.SelectFieldObject(fieldObject.Id);
+        _dragState = new DragState(
+            fieldObject.Id,
+            bounds,
+            args.ClientX,
+            args.ClientY,
+            args.ClientX - bounds.Left - fieldObject.X,
+            args.ClientY - bounds.Top - fieldObject.Y,
+            false);
+    }
+
+    private void OnPointerMove(PointerEventArgs args)
+    {
+        if (_dragState is null)
+            return;
+
+        var deltaX = args.ClientX - _dragState.Value.StartClientX;
+        var deltaY = args.ClientY - _dragState.Value.StartClientY;
+        if (!_dragState.Value.HasMoved && Math.Sqrt(deltaX * deltaX + deltaY * deltaY) < DragThreshold)
+            return;
+
+        if (!_dragState.Value.HasMoved)
+            _dragState = _dragState.Value with { HasMoved = true };
+
+        var targetX = args.ClientX - _dragState.Value.Bounds.Left - _dragState.Value.PointerOffsetX;
+        var targetY = args.ClientY - _dragState.Value.Bounds.Top - _dragState.Value.PointerOffsetY;
+        GameState.MoveFieldObject(_dragState.Value.FieldObjectId, targetX, targetY);
+    }
+
+    private void OnPointerUp(PointerEventArgs _)
+    {
+        if (_dragState is null)
+            return;
+
+        var dragState = _dragState.Value;
+        GameState.EndFieldObjectDrag(dragState.FieldObjectId);
+
+        if (dragState.HasMoved)
+        {
+            _suppressSurfaceClick = true;
+        }
+        else
+        {
+            GameState.SelectFieldObject(dragState.FieldObjectId);
+        }
+
+        _dragState = null;
+    }
+
+    private void OnPointerLeave(PointerEventArgs _)
+    {
+        if (_dragState is null)
+            return;
+
+        GameState.EndFieldObjectDrag(_dragState.Value.FieldObjectId);
+        _dragState = null;
+    }
+
+    private void OnSurfaceClick()
+    {
+        if (_suppressSurfaceClick)
+        {
+            _suppressSurfaceClick = false;
+            return;
+        }
+
+        GameState.SelectFieldObject(null);
+    }
+
+    private void OnGameStateChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    [JSInvokable]
+    public Task OnSurfaceResized(double width, double height)
+    {
+        GameState.SetFieldSize(width, height);
+        return Task.CompletedTask;
+    }
+
+    private static string FormatPercent(double value)
+        => string.Create(CultureInfo.InvariantCulture, $"{value:F1}%");
+
+    private static string BuildBeamStyle(AlignmentBeam beam)
+        => string.Create(
+            CultureInfo.InvariantCulture,
+            $"left:{beam.Left:F1}px;top:{beam.Top:F1}px;width:{beam.Width:F1}px;height:{beam.Height:F1}px;");
+
+    private static string BuildFieldObjectStyle(FieldNode fieldObject)
+        => string.Create(
+            CultureInfo.InvariantCulture,
+            $"left:{fieldObject.X:F1}px;top:{fieldObject.Y:F1}px;width:{FieldNode.Size:F0}px;height:{FieldNode.Size:F0}px;");
+
+    private string GetFieldObjectClasses(FieldNode fieldObject)
+    {
+        var classes = new List<string> { "field-node", $"field-node--{fieldObject.Type.CssModifier()}" };
+        if (_dragState?.FieldObjectId == fieldObject.Id)
+            classes.Add("field-node--dragging");
+        if (GameState.SelectedFieldObject?.Id == fieldObject.Id)
+            classes.Add("field-node--selected");
+
+        return string.Join(" ", classes);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        GameState.Changed -= OnGameStateChanged;
+        _selfReference?.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        if (!_isObservingSurface)
+            return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("emojimentalField.disposeSizeObserver", _surface);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private readonly record struct DragState(
+        int FieldObjectId,
+        FieldBounds Bounds,
+        double StartClientX,
+        double StartClientY,
+        double PointerOffsetX,
+        double PointerOffsetY,
+        bool HasMoved);
+
+    private readonly record struct FieldBounds(double Left, double Top);
+}
+
+

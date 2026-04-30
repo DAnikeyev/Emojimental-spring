@@ -1,0 +1,30 @@
+﻿@page "/"
+
+@using System.Threading
+@implements IDisposable
+
+<PageTitle>Emojimental</PageTitle>
+
+<div class="home-shell">
+    <LeftSidebar />
+    <Field />
+    <RightSidebar />
+</div>
+
+@code {
+    private const double TickSeconds = 1.0 / 30.0;
+
+    [Inject] public required GameState GameState { get; set; }
+
+    private Timer? _tickTimer;
+
+    protected override void OnInitialized()
+    {
+        _tickTimer = new Timer(_ => GameState.Advance(TickSeconds), null, TimeSpan.Zero, TimeSpan.FromSeconds(TickSeconds));
+    }
+
+    public void Dispose()
+    {
+        _tickTimer?.Dispose();
+    }
+}
