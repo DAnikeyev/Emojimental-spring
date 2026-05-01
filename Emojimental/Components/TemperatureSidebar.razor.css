@@ -1,0 +1,262 @@
+﻿.temperature-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 0.75rem 0.6rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #ffffff, #eef4ff);
+    border: 1px solid #d8e2f3;
+    box-shadow: 0 14px 30px rgba(39, 72, 121, 0.12);
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.temperature-sidebar__top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 2;
+    min-height: 0;
+    width: 100%;
+}
+
+.temperature-sidebar__bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.temperature-sidebar__slider-shell {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+.temperature-sidebar__vslider {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+}
+
+.temperature-sidebar__vslider-track {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    padding: 0.3rem 0 0.3rem 0.2rem;
+    box-sizing: border-box;
+}
+
+.temperature-sidebar__vslider-gutter {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    cursor: pointer;
+    touch-action: none;
+    border-radius: 0.65rem;
+}
+
+.temperature-sidebar__vslider-gutter:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(255, 179, 71, 0.75);
+}
+
+.temperature-sidebar__vslider-gutter:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+.temperature-sidebar__vslider-gutter:focus-visible {
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(255, 179, 71, 0.75);
+}
+
+.temperature-sidebar__vslider-rail {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(38%, 2.2rem);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffcf7a, #ffb347);
+    box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.45);
+}
+
+.temperature-sidebar__vslider-thumb {
+    position: absolute;
+    top: 0;
+    left: calc(min(38%, 2.2rem) / 2);
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    background: #6d7385;
+    box-shadow: 0 3px 10px rgba(31, 42, 68, 0.35);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.temperature-sidebar__vslider-mark {
+    position: absolute;
+    right: 0;
+    left: calc(min(38%, 2.2rem) + 0.3rem);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.temperature-sidebar__vslider-tick {
+    flex: 0 0 0.85rem;
+    height: 2px;
+    border-radius: 999px;
+    background: #8c99b8;
+}
+
+.temperature-sidebar__vslider-label {
+    flex: 0 0 1.6rem;
+    text-align: right;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #5b6880;
+    font-variant-numeric: tabular-nums;
+}
+
+.temperature-sidebar__current {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1f2a44;
+}
+
+.temperature-sidebar__bonuses {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.temperature-sidebar__bonus {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #d8e2f3;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #1f2a44;
+}
+
+.temperature-sidebar__bonus span {
+    white-space: nowrap;
+}
+
+.temperature-sidebar__clock {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.temperature-sidebar__clock-face {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 270deg,
+        #fdb44b 0deg,
+        #1a2a5e 60deg,
+        #1a2a5e 120deg,
+        #f9a66c 180deg,
+        #87ceeb 240deg,
+        #87ceeb 300deg,
+        #fdb44b 360deg
+    );
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #d8e2f3;
+}
+
+.temperature-sidebar__clock-sun,
+.temperature-sidebar__clock-moon {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.temperature-sidebar__clock-sun {
+    bottom: 12%;
+}
+
+.temperature-sidebar__clock-moon {
+    top: 12%;
+}
+
+.temperature-sidebar__clock-hand {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    width: 3px;
+    height: 45%;
+    background: #ffffff;
+    transform-origin: bottom center;
+    border-radius: 2px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+    outline: 1px solid #000000;
+    outline-offset: -0.5px;
+}
+
+.temperature-sidebar__clock-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: #ffb347;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 6px rgba(255, 179, 71, 0.7);
+}
+
+.temperature-sidebar__daynight-bonus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #1f2a44;
+}
+
+.temperature-sidebar__date {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #5b6880;
+    text-align: center;
+}
+
+@media (max-width: 1100px) {
+    .temperature-sidebar__slider-shell {
+        min-height: 22rem;
+    }
+}

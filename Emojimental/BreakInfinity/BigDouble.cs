@@ -137,19 +137,13 @@ public readonly struct BigDouble :
         if (Mantissa == 0d)
             return "0";
 
-        var provider = CultureInfo.InvariantCulture;
-
-        // Values too small to represent as a double should display as 0.00 in the "< 1000" bucket.
         if (Exponent < -324)
-            return 0d.ToString("0.00", provider);
+            return "0.00";
 
-        // Since we normalize to 1 <= |Mantissa| < 10 (unless zero), exponent ranges map cleanly:
-        // exp < 3  => |value| < 1,000
-        // exp < 6  => |value| < 1,000,000
         if (Exponent < 3)
         {
             var d = Mantissa * Pow10(Exponent);
-            return d.ToString("0.00", provider);
+            return d.ToString("0.00", CultureInfo.InvariantCulture);
         }
 
         if (Exponent < 6)
@@ -157,10 +151,9 @@ public readonly struct BigDouble :
             var d = Mantissa * Pow10(Exponent);
             d = Math.Round(d, 9, MidpointRounding.AwayFromZero);
             d = Math.Truncate(d);
-            return d.ToString("0", provider);
+            return d.ToString("0", CultureInfo.InvariantCulture);
         }
 
-        // Large numbers: fixed 3-decimal scientific (e.g., 1.056E812).
         var m = Mantissa;
         var e = Exponent;
 
@@ -171,8 +164,7 @@ public readonly struct BigDouble :
             e += 1;
         }
 
-        var mantissaText = rounded.ToString("0.000", provider);
-        return mantissaText + "E" + e.ToString(CultureInfo.InvariantCulture);
+        return rounded.ToString("0.000", CultureInfo.InvariantCulture) + "E" + e.ToString(CultureInfo.InvariantCulture);
     }
 
     public string TS() => Display();

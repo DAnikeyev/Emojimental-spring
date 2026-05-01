@@ -90,10 +90,127 @@
     color: #1f2a44;
 }
 
-.right-sidebar__upgrade {
+.right-sidebar__upgrade-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.right-sidebar__upgrade-btn {
+    flex: 1;
     min-height: 3.25rem;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 700;
+    padding: 0.25rem;
+}
+
+.right-sidebar__base-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #d8e2f3;
+    font-size: 0.85rem;
+    color: #5b6880;
+}
+
+.right-sidebar__base-item {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    white-space: nowrap;
+}
+
+.right-sidebar__passive-stats {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.right-sidebar__passive-divider {
+    width: 100%;
+    height: 1px;
+    margin: 0.25rem 0 0.75rem;
+    background: linear-gradient(90deg, transparent, #c5d5e8, transparent);
+}
+
+.right-sidebar__passive-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.7rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid #d8e2f3;
+}
+
+.right-sidebar__passive-row + .right-sidebar__passive-row {
+    margin-top: 0.5rem;
+}
+
+.right-sidebar__passive-emoji {
+    flex: 0 0 2rem;
+    font-size: 1.15rem;
+    text-align: center;
+    line-height: 1;
+}
+
+.right-sidebar__passive-value {
+    flex: 1;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #1f2a44;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.right-sidebar__passive-star {
+    flex: 0 0 1.8rem;
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 0.5rem;
+    border: 1px solid #c5d0e0;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.15s;
+}
+
+.right-sidebar__passive-star--filled {
+    border-color: rgba(241, 180, 61, 0.88);
+    background: linear-gradient(180deg, rgba(255, 251, 234, 0.98), rgba(255, 232, 171, 0.98));
+    box-shadow: 0 0 0 2px rgba(255, 209, 92, 0.18);
+}
+
+.right-sidebar__passive-star--drop-target {
+    border-color: rgba(255, 209, 92, 0.92);
+    box-shadow: 0 0 0 3px rgba(255, 209, 92, 0.24), 0 0 14px rgba(255, 209, 92, 0.45);
+}
+
+.right-sidebar__passive-star-icon {
+    font-size: 1rem;
+    line-height: 1;
+    cursor: default;
+}
+
+.right-sidebar__passive-star-empty {
+    font-size: 0.8rem;
+    line-height: 1;
+    opacity: 0.25;
+}
+
+.right-sidebar__base-value {
+    color: #808080;
+    font-weight: 300;
+    font-size: 0.75rem;
+    margin-left: 0.15rem;
 }
 
 @media (max-width: 1100px) {
@@ -101,4 +218,3 @@
         position: static;
     }
 }
-

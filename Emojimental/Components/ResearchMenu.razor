@@ -1,0 +1,59 @@
+﻿@using Emojimental.Models
+@implements IDisposable
+@inject Services.GameState GameState
+
+<section class="left-sidebar__section">
+    <div class="left-sidebar__section-header" aria-label="Research">
+        <span class="left-sidebar__section-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Research)</span>
+    </div>
+
+    @foreach (var research in GameState.Researches)
+    {
+        var owned = GameState.HasResearch(research.Type);
+
+        <article class="left-sidebar__card left-sidebar__card--research left-sidebar__card--research-@research.CardModifier @(owned ? "left-sidebar__card--done" : "")">
+            <div class="left-sidebar__research-status" aria-hidden="true">
+                @(owned ? "1/1" : "0/1")
+            </div>
+
+            <div class="left-sidebar__research-effect">@research.EffectDisplay</div>
+
+            <div class="left-sidebar__research-action">
+                <button type="button"
+                        class="btn btn-primary btn-sm left-sidebar__research-button"
+                        @onclick="() => GameState.BuyResearch(research.Type)"
+                        disabled="@(!GameState.CanBuyResearch(research.Type))"
+                        aria-label="Buy research @research.Type">
+                    <span class="left-sidebar__research-button-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Research)</span>
+                    <span class="left-sidebar__research-price">@research.Price.Display()@EmojiBank.Resource(research.PriceResource)</span>
+                </button>
+            </div>
+        </article>
+    }
+</section>
+
+
+
+@code {
+    private DateTime _lastUpdate = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+}

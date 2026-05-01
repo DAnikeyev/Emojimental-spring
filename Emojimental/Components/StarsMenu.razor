@@ -1,0 +1,95 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Emojimental.Models
+@implements IDisposable
+@inject Services.GameState GameState
+
+<section class="left-sidebar__section left-sidebar__section--stars">
+    <div class="left-sidebar__section-header" aria-label="Stars">
+        <span class="left-sidebar__section-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
+        <span class="left-sidebar__badge">@GameState.StarInventory.Count(slot => slot.HasStar)</span>
+    </div>
+
+    <div class="left-sidebar__star-grid" aria-label="Star inventory">
+        @foreach (var starSlot in GameState.StarInventory)
+        {
+            var hasStar = starSlot.HasStar;
+            var isDragging = GameState.DraggingStarSlotIndex == starSlot.Index;
+            var canDrop = GameState.CanDropStarIntoInventory(starSlot.Index);
+            var starSlotClasses = $"left-sidebar__star-slot{(hasStar ? " left-sidebar__star-slot--filled" : string.Empty)}{(isDragging ? " left-sidebar__star-slot--dragging" : string.Empty)}{(canDrop ? " left-sidebar__star-slot--drop-target" : string.Empty)}";
+
+            <div class="@starSlotClasses"
+                 @ondragover:preventDefault="true"
+                 @ondrop="@(() => GameState.MoveStarInInventory(starSlot.Index))">
+                @if (hasStar)
+                {
+                    <div class="left-sidebar__star-shell"
+                         @onmouseenter="() => _hoveredStarIndex = starSlot.Index"
+                         @onmouseleave="OnStarHoverEnd">
+                        <button type="button"
+                                class="left-sidebar__star"
+                                draggable="true"
+                                @ondragstart="@(args => OnStarDragStart(starSlot.Index, args))"
+                                @ondragend="OnStarDragEnd"
+                                aria-label="Star modifiers">
+                            @EmojiBank.Symbol(SymbolType.Stars)
+                        </button>
+
+                        @if (_hoveredStarIndex == starSlot.Index)
+                        {
+                            <dl class="left-sidebar__star-popup" aria-label="Star modifiers">
+                                @foreach (var modifier in GameState.StarModifiers)
+                                {
+                                    <div>
+                                        <dt>@EmojiBank.Symbol(SymbolType.Stars)</dt>
+                                        <dd>@modifier</dd>
+                                    </div>
+                                }
+                            </dl>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private int? _hoveredStarIndex;
+    private DateTime _lastUpdate = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+
+    private void OnStarDragStart(int inventorySlotIndex, DragEventArgs _)
+    {
+        GameState.BeginStarDrag(inventorySlotIndex);
+        _hoveredStarIndex = inventorySlotIndex;
+    }
+
+    private void OnStarDragEnd(DragEventArgs _)
+        => GameState.EndStarDrag();
+
+    private void OnStarHoverEnd()
+    {
+        if (GameState.DraggingStarSlotIndex is null)
+            _hoveredStarIndex = null;
+    }
+}
+

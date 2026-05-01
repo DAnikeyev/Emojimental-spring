@@ -1,0 +1,88 @@
+﻿@using Emojimental.Models
+@using Emojimental.Services
+@implements IDisposable
+@inject GameState GameState
+@inject IJSRuntime JS
+
+<div class="snowfall-container">
+    <canvas @ref="_canvas"></canvas>
+</div>
+
+@code {
+    private ElementReference _canvas;
+    private float _lastSnowIntensity = -1;
+    private float _lastRainIntensity = -1;
+    private float _lastEnergyIntensity = -1;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("emojimentalSnowfall.init", _canvas, EmojiBank.Resource(ResourceType.Ice), EmojiBank.Resource(ResourceType.Water), EmojiBank.Resource(ResourceType.Energy));
+            GameState.RequestUiUpdate += HandleUiUpdate;
+        }
+
+        var snowIntensity = GetSnowIntensity();
+        if (Math.Abs(snowIntensity - _lastSnowIntensity) > 0.01f)
+        {
+            _lastSnowIntensity = snowIntensity;
+            await JS.InvokeVoidAsync("emojimentalSnowfall.setSnowIntensity", snowIntensity / 2);
+        }
+
+        var rainIntensity = GetRainIntensity();
+        if (Math.Abs(rainIntensity - _lastRainIntensity) > 0.01f)
+        {
+            _lastRainIntensity = rainIntensity;
+            await JS.InvokeVoidAsync("emojimentalSnowfall.setRainIntensity", rainIntensity / 2);
+        }
+
+        var energyIntensity = GetEnergyIntensity();
+        if (Math.Abs(energyIntensity - _lastEnergyIntensity) > 0.01f)
+        {
+            _lastEnergyIntensity = energyIntensity;
+            // Emit from the ☀️ celestial container position (computed by JS)
+            await JS.InvokeVoidAsync("emojimentalSnowfall.setEnergyIntensity", energyIntensity / 2);
+        }
+    }
+
+    private void HandleUiUpdate()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private float GetEnergyIntensity()
+    {
+        var p = GameState.DayCyclePosition;
+        // Sun is visible from 0.25 to 0.75
+        if (p < 0.25 || p > 0.75) return 0f;
+        
+        // Intensity peaks at MidDay (0.5)
+        var timeFactor = (float)Math.Max(0, 1.0 - Math.Abs(p - 0.5) * 4.0); // 0 at 0.25 and 0.75, 1 at 0.5
+        
+        // Scale with temperature bonus
+        var bonus = (float)GameState.EnergyTemperatureMultiplier.ToDouble();
+        return Math.Min(1f, (bonus - 1f) / 5f) * timeFactor;
+    }
+
+    private float GetSnowIntensity()
+    {
+        var temp = GameState.TemperatureCelsius;
+        if (temp <= -10) return 1f;
+        if (temp >= 0) return 0f;
+        return (0 - temp) / 10f;
+    }
+
+    private float GetRainIntensity()
+    {
+        var temp = GameState.TemperatureCelsius;
+        if (temp <= 0 || temp >= 10) return 0f;
+        // Peak at 5°C, linear ramp up from 0→5 and down from 5→10
+        return 1f - Math.Abs(temp - 5f) / 5f;
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= HandleUiUpdate;
+        _ = JS.InvokeVoidAsync("emojimentalSnowfall.dispose");
+    }
+}

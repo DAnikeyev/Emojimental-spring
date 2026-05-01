@@ -1,6 +1,7 @@
 ﻿@page "/"
 
 @using System.Threading
+@using System.Diagnostics
 @implements IDisposable
 
 <PageTitle>Emojimental</PageTitle>
@@ -8,23 +9,51 @@
 <div class="home-shell">
     <LeftSidebar />
     <Field />
+    <TemperatureSidebar />
     <RightSidebar />
 </div>
 
 @code {
     private const double TickSeconds = 1.0 / 30.0;
+    private const double UiUpdateSeconds = 1.0 / 15.0;
 
     [Inject] public required GameState GameState { get; set; }
 
     private Timer? _tickTimer;
+    private Timer? _uiTimer;
+    private bool _uiUpdateRequested;
+    private long _lastTickTimestamp;
 
     protected override void OnInitialized()
     {
-        _tickTimer = new Timer(_ => GameState.Advance(TickSeconds), null, TimeSpan.Zero, TimeSpan.FromSeconds(TickSeconds));
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+        _lastTickTimestamp = Stopwatch.GetTimestamp();
+        _tickTimer = new Timer(_ => TickGame(), null, TimeSpan.Zero, TimeSpan.FromSeconds(TickSeconds));
+        _uiTimer = new Timer(_ => TickUi(), null, TimeSpan.Zero, TimeSpan.FromSeconds(UiUpdateSeconds));
+    }
+
+    private void TickGame()
+    {
+        var currentTimestamp = Stopwatch.GetTimestamp();
+        var elapsedSeconds = Stopwatch.GetElapsedTime(_lastTickTimestamp, currentTimestamp).TotalSeconds;
+        _lastTickTimestamp = currentTimestamp;
+
+        GameState.Advance(elapsedSeconds);
+    }
+
+    private void OnRequestUiUpdate() => _uiUpdateRequested = true;
+
+    private void TickUi()
+    {
+        if (!_uiUpdateRequested) return;
+        _uiUpdateRequested = false;
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
         _tickTimer?.Dispose();
+        _uiTimer?.Dispose();
     }
 }

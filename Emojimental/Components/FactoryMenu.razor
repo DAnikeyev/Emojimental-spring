@@ -1,0 +1,68 @@
+﻿@using Emojimental.GameEngine.Values
+@using Emojimental.Models
+@implements IDisposable
+@inject Services.GameState GameState
+
+<section class="left-sidebar__section">
+
+@foreach (var boxType in DeployTypes)
+    {
+        <article class="left-sidebar__card left-sidebar__card--compact left-sidebar__card--@boxType.CssModifier()">
+            <div class="left-sidebar__card-header-main">
+                <span class="left-sidebar__count">@GameState.CountFieldObjects(boxType)</span>
+                <div class="left-sidebar__card-emoji" aria-hidden="true">
+                    <div class="left-sidebar__icon">@boxType.Icon()</div>
+                </div>
+                <span>:</span>
+                <div class="left-sidebar__description">
+                    @boxType.Infographic()
+                </div>
+            </div>
+            <div class="left-sidebar__actions">
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        @onclick="() => GameState.AddFieldObject(boxType)"
+                        disabled="@(!GameState.CanBuyFieldNode(boxType))"
+                        aria-label="Add @boxType.DisplayName()">
+                    @EmojiBank.Resource(ResourceType.Energy)@GameState.GetFieldNodeCost(boxType).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)
+                </button>
+            </div>
+        </article>
+    }
+</section>
+
+@code {
+    private DateTime _lastUpdate = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+
+    private static readonly FieldNodeType[] DeployTypes =
+    [
+        FieldNodeType.Snow,
+        FieldNodeType.Energy,
+        FieldNodeType.Smelter,
+        FieldNodeType.Garden,
+        FieldNodeType.Woodcutter,
+        FieldNodeType.Builder,
+        FieldNodeType.Bonfire,
+        FieldNodeType.Recycler
+    ];
+}

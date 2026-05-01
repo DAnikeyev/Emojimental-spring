@@ -7,6 +7,7 @@ public class Stat : IValueSource
     public BigDouble BaseValue;
 
     private readonly List<ModifierEntry> _modifiers = new();
+    private ModifierEntry[]? _cachedSortedModifiers;
     private int _nextInsertionOrder;
 
     /// <summary>
@@ -16,7 +17,16 @@ public class Stat : IValueSource
         new[] { ModifierStage.Add, ModifierStage.Multiply, ModifierStage.Clamp, ModifierStage.Post };
 
     public void AddModifier(IModifier modifier)
-        => _modifiers.Add(new ModifierEntry(modifier, _nextInsertionOrder++));
+    {
+        _modifiers.Add(new ModifierEntry(modifier, _nextInsertionOrder++));
+        _cachedSortedModifiers = null;
+    }
+
+    public void RemoveModifier(IModifier modifier)
+    {
+        _modifiers.RemoveAll(e => e.Modifier == modifier);
+        _cachedSortedModifiers = null;
+    }
 
     public void AddAdd(Func<EvaluationContext, BigDouble> value, int priority = 0)
         => AddModifier(new AddModifier(value, priority));
@@ -34,7 +44,9 @@ public class Stat : IValueSource
     {
         BigDouble value = BaseValue;
 
-        foreach (var entry in _modifiers.OrderBy(GetSortKey))
+        _cachedSortedModifiers ??= _modifiers.OrderBy(GetSortKey).ToArray();
+
+        foreach (var entry in _cachedSortedModifiers)
             value = entry.Modifier.Apply(value, ctx);
 
         return value;

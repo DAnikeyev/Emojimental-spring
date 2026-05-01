@@ -1,0 +1,16 @@
+﻿@using Emojimental.GameEngine.Values
+@using Emojimental.Models
+@using BreakInfinity
+
+<div class="resource-item" aria-label="@Label">
+    <span class="resource-item__icon">@EmojiBank.Resource(Type)</span>
+    <span class="resource-item__value">@Evaluate(Value).Display()</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ResourceType Type { get; set; }
+    [Parameter, EditorRequired] public Stat Value { get; set; }
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    private BigDouble Evaluate(Stat stat) => new EvaluationContext().Get(stat);
+}

@@ -1,0 +1,134 @@
+﻿@using Emojimental.GameEngine.Values
+@using Emojimental.Models
+@implements IDisposable
+@inject Services.GameState GameState
+
+<section class="left-sidebar__section">
+    <div class="left-sidebar__section-header" aria-label="Exchange">
+        <span class="left-sidebar__section-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Exchange)</span>
+    </div>
+
+    @* Research Point Block *@
+    <article class="left-sidebar__card left-sidebar__card--exchange">
+        <div class="left-sidebar__card-header">
+            <div>
+                <span class="left-sidebar__icon">@EmojiBank.Resource(ResourceType.ResearchPoint)</span>
+                <span class="left-sidebar__count">@GameState.EvaluateStat(GameState.ResearchPoint).Display()</span>
+            </div>
+            <button type="button"
+                    class="btn btn-primary btn-sm left-sidebar__wide-button"
+                    @onclick="() => GameState.BuyResearchPoint()"
+                    disabled="@(!GameState.CanBuyResearchPoint())">
+                @GameState.GetResearchPointCost().Display() @EmojiBank.Resource(ResourceType.Energy)
+            </button>
+        </div>
+        <div class="exchange-snowman-content">
+            <div class="exchange-line-2">
+                @EmojiBank.Symbol(SymbolType.Research) @EmojiBank.Symbol(SymbolType.Arrow) 💡
+            </div>
+        </div>
+    </article>
+
+    @* Snowman Block *@
+    <article class="left-sidebar__card left-sidebar__card--exchange">
+        <div class="left-sidebar__card-header">
+            <div>
+                <span class="left-sidebar__icon">@EmojiBank.Symbol(SymbolType.Snowman)</span>
+                <span class="left-sidebar__count">@GameState.SnowmanCount</span>
+            </div>
+            <button type="button"
+                    class="btn btn-primary btn-sm left-sidebar__wide-button"
+                    @onclick="() => GameState.BuySnowman()"
+                    disabled="@(!GameState.CanBuySnowman())">
+                @GameState.GetSnowmanCost().Display() @EmojiBank.Resource(ResourceType.Ice)
+            </button>
+        </div>
+
+        <div class="exchange-snowman-content">
+            <div class="exchange-line-2">
+                @(GameState.SnowmanCoinIncomePerSecond.Display())@EmojiBank.Resource(ResourceType.Coin) @(GameState.SnowmanHappinessIncomePerSecond.Display())@EmojiBank.Resource(ResourceType.Happiness) / @EmojiBank.Symbol(SymbolType.PerSecond)
+            </div>
+        </div>
+    </article>
+
+    @* Sapling Block *@
+    <article class="left-sidebar__card left-sidebar__card--exchange">
+        <div class="left-sidebar__card-header">
+            <div>
+                <span class="left-sidebar__icon">🌱</span>
+                <span class="left-sidebar__count">@GameState.SaplingCount</span>
+            </div>
+            <button type="button"
+                    class="btn btn-primary btn-sm left-sidebar__wide-button"
+                    @onclick="() => GameState.BuySapling()"
+                    disabled="@(!GameState.CanBuySapling())">
+                @GameState.GetSaplingCost().Display() @EmojiBank.Resource(ResourceType.Coin)
+            </button>
+        </div>
+        <div class="exchange-snowman-content">
+            <div class="exchange-line-2">
+                🌱 @EmojiBank.Symbol(SymbolType.Arrow) 🌳
+            </div>
+        </div>
+    </article>
+
+    @* Empty Block 4 *@
+    <article class="left-sidebar__card left-sidebar__card--exchange">
+        <div class="left-sidebar__card-header">
+            <div>
+                <span class="left-sidebar__icon">❓</span>
+                <span class="left-sidebar__count">0</span>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm left-sidebar__wide-button" disabled>
+                ---
+            </button>
+        </div>
+        <div class="exchange-snowman-content">
+            <div class="exchange-line-2">
+                ---
+            </div>
+        </div>
+    </article>
+
+    @* Empty Block 5 *@
+    <article class="left-sidebar__card left-sidebar__card--exchange">
+        <div class="left-sidebar__card-header">
+            <div>
+                <span class="left-sidebar__icon">❓</span>
+                <span class="left-sidebar__count">0</span>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm left-sidebar__wide-button" disabled>
+                ---
+            </button>
+        </div>
+        <div class="exchange-snowman-content">
+            <div class="exchange-line-2">
+                ---
+            </div>
+        </div>
+    </article>
+</section>
+
+@code {
+    private DateTime _lastUpdate = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+}

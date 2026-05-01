@@ -1,11 +1,22 @@
 ﻿.home-shell {
     display: grid;
-    grid-template-columns: minmax(17rem, 20rem) minmax(0, 1fr) minmax(17rem, 19rem);
-    gap: 1rem;
+    grid-template-columns: 18rem minmax(0, 1fr) minmax(7rem, 9rem) minmax(14rem, 16rem);
+    gap: 1rem 1rem;
     align-items: stretch;
     height: 100%;
     min-height: 0;
     overflow: hidden;
+}
+
+.home-shell > ::fixed-sidebar {
+    margin-left: 0;
+}
+
+/* Specific fix for left sidebar to start from the edge */
+::deep .left-sidebar {
+    margin-left: -0.5rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 @media (max-width: 1100px) {
@@ -14,5 +25,3 @@
         overflow: auto;
     }
 }
-
-

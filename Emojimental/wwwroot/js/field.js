@@ -35,6 +35,18 @@
 
         observer.disconnect();
         delete element.__emojimentalFieldObserver;
+    },
+
+    setPointerCapture(element, pointerId) {
+        if (element && pointerId != null) {
+            element.setPointerCapture(pointerId);
+        }
+    },
+
+    releasePointerCapture(element, pointerId) {
+        if (element && pointerId != null) {
+            element.releasePointerCapture(pointerId);
+        }
     }
 };
 

@@ -1,0 +1,36 @@
+﻿.resource-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px;
+    justify-content: flex-start;
+}
+
+.resource-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.cheat-button {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 0 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: white;
+}
+
+.cheat-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.timer {
+    margin-left: auto;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #1f2a44;
+    padding: 0 8px;
+    white-space: nowrap;
+}

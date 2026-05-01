@@ -1,4 +1,5 @@
-﻿@inherits LayoutComponentBase
+﻿@using Emojimental.Components
+@inherits LayoutComponentBase
 @implements IDisposable
 @inject GameState GameState
 
@@ -7,12 +8,7 @@
         <div class="top-row__brand" aria-label="Emojimental">✨</div>
 
         <div class="top-row__resources">
-            <div class="top-row__resource" aria-label="Energy">⚡ <strong>@FormatResource(GameState.Energy)</strong></div>
-            <div class="top-row__resource" aria-label="Ice">🧊 <strong>@FormatResource(GameState.Ice)</strong></div>
-            <div class="top-row__resource" aria-label="Coin">💰 <strong>@FormatResource(GameState.Coin)</strong></div>
-            <div class="top-row__resource" aria-label="Sapling">🌱 <strong>@FormatResource(GameState.Sapling)</strong></div>
-            <div class="top-row__resource" aria-label="Tree">🌲 <strong>@FormatResource(GameState.Tree)</strong></div>
-            <div class="top-row__resource" aria-label="Water">💧 <strong>@FormatResource(GameState.Water)</strong></div>
+            <ResourceBar />
         </div>
     </header>
 
@@ -21,21 +17,30 @@
             @Body
         </article>
     </main>
+
+    <Snowfall />
 </div>
 
 @code {
     protected override void OnInitialized()
     {
         GameState.Changed += OnGameStateChanged;
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
     }
 
-    private void OnGameStateChanged() => InvokeAsync(StateHasChanged);
+    private void OnGameStateChanged()
+    {
+        StateHasChanged();
+    }
 
-    private static string FormatResource(BigDouble value)
-        => value.Display();
+    private void OnRequestUiUpdate()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
         GameState.Changed -= OnGameStateChanged;
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
     }
 }

@@ -1,0 +1,81 @@
+﻿@using Emojimental.Models
+@using Emojimental.Services
+@implements IDisposable
+@inject GameState GameState
+
+<div class="resource-bar">
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.Energy" Value="GameState.Energy" Label="Energy" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.Ice" Value="GameState.Ice" Label="Snow" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.Water" Value="GameState.Water" Label="Water" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.Coin" Value="GameState.Coin" Label="Coin" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.Tree" Value="GameState.Tree" Label="Tree" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.Wood" Value="GameState.Wood" Label="Wood" />
+        <button class="cheat-button" @onclick="GameState.CheatWood">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.ResearchPoint" Value="GameState.ResearchPoint" Label="Research" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <div class="resource-group">
+        <ResourceItem Type="ResourceType.StarDust" Value="GameState.StarDust" Label="StarDust" />
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    </div>
+    <span class="timer">@FormatPlayTime(GameState.PlayTime)</span>
+</div>
+
+@code {
+    private static string FormatPlayTime(TimeSpan t)
+    {
+        var totalSeconds = t.TotalSeconds;
+        var hh = (int)totalSeconds / 3600;
+        var mm = (int)(totalSeconds / 60) % 60;
+        var ss = (int)totalSeconds % 60;
+        var ff = (int)((totalSeconds - Math.Truncate(totalSeconds)) * 100);
+        return $"{hh:D2}:{mm:D2}:{ss:D2}:{ff:D2}";
+    }
+
+    private DateTime _lastUpdate = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        GameState.Changed += OnGameStateChanged;
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private void OnGameStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameState.Changed -= OnGameStateChanged;
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+}

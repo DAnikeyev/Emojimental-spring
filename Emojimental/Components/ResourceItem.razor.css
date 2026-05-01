@@ -1,0 +1,35 @@
+﻿.resource-item {
+    display: flex;
+    align-items: center;
+    background: rgba(237, 243, 255, 0.9);
+    border: 1px solid #d8e2f3;
+    border-radius: 4px;
+    padding: 2px 6px;
+    /* Fixed width to avoid pushing other elements. 
+       Assuming 1ch is approx 8-10px, icon + 10 chars + gaps:
+       Icon (~24px) + Gap (4px) + 10 chars (~90px) + Padding (~12px) = ~130px
+    */
+    width: 140px; 
+    box-sizing: border-box;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.resource-item__icon {
+    flex-shrink: 0;
+    margin-right: 6px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+}
+
+.resource-item__value {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace; /* Monospace is better for fixed-width boxes */
+    font-weight: bold;
+    color: #1f2a44;
+    flex-grow: 1;
+    text-align: right;
+}

@@ -2,77 +2,153 @@
 @inject GameState GameState
 
 <aside class="right-sidebar">
-    @if (GameState.SelectedFieldObject is null)
-    {
-        <div class="right-sidebar__empty" aria-label="No box selected">
-            <span class="right-sidebar__empty-icon">🧰</span>
-        </div>
-    }
-    else
-    {
-        var fieldObject = GameState.SelectedFieldObject;
+    <div class="right-sidebar__content">
+        @if (GameState.SelectedFieldObject is not null)
+        {
+            var fieldObject = GameState.SelectedFieldObject;
 
-        <div class="right-sidebar__header">
-            <div aria-hidden="true">
-                <div class="right-sidebar__type-icon">@fieldObject.Icon</div>
-                <div class="right-sidebar__resource-icon">@fieldObject.ResourceIcon</div>
+            <div class="right-sidebar__header">
+                <div aria-hidden="true">
+                    <div class="right-sidebar__type-icon">@fieldObject.Icon</div>
+                    <div class="right-sidebar__resource-icon">@fieldObject.ResourceIcon</div>
+                </div>
             </div>
 
-            <button type="button"
-                    class="right-sidebar__close"
-                    @onclick="OnClose"
-                    aria-label="Close box details">
-                ✖️
-            </button>
-        </div>
+            <div class="right-sidebar__upgrade-row">
+                <button type="button"
+                        class="btn btn-primary right-sidebar__upgrade-btn"
+                        @onclick="OnUpgradeItem"
+                        disabled="@(!GameState.CanUpgradeSelectedFieldObjectItem())"
+                        aria-label="Upgrade @fieldObject.TypeDisplayName amount">
+                    @fieldObject.ResourceIcon @EmojiBank.Symbol(SymbolType.Arrow) @EmojiBank.Resource(ResourceType.Energy)@fieldObject.ItemUpgradeCostDisplay()
+                </button>
 
-        <button type="button"
-                class="btn btn-primary right-sidebar__upgrade"
-                @onclick="OnUpgrade"
-                disabled="@(!GameState.CanUpgradeSelectedFieldObject())"
-                aria-label="Upgrade @fieldObject.TypeDisplayName">
-            ⬆️ ⚡ @fieldObject.UpgradeCostDisplay()
-        </button>
+                <button type="button"
+                        class="btn btn-primary right-sidebar__upgrade-btn"
+                        @onclick="OnUpgradeTime"
+                        disabled="@(!GameState.CanUpgradeSelectedFieldObjectTime())"
+                        aria-label="Upgrade @fieldObject.TypeDisplayName cooldown">
+                    @EmojiBank.Symbol(SymbolType.PerSecond) @EmojiBank.Symbol(SymbolType.Arrow) @EmojiBank.Resource(ResourceType.Energy)@fieldObject.TimeUpgradeCostDisplay()
+                </button>
+            </div>
 
-        <dl class="right-sidebar__stats">
-            <div aria-label="Level">
-                <dt>⭐</dt>
-                <dd>@fieldObject.Level</dd>
+            <div class="right-sidebar__base-info">
+                @foreach (var consumption in GameState.GetDynamicConsumption(fieldObject))
+                {
+                    <span class="right-sidebar__base-item">
+                        @EmojiBank.Resource(consumption.Type) @(consumption.Amount.Display())
+                    </span>
+                }
+                <span class="right-sidebar__base-item">
+                    @EmojiBank.Symbol(SymbolType.Arrow) @fieldObject.ResourceIcon @((fieldObject.OutputValue.BaseValue + fieldObject.ItemLevel - 1).Display())
+                </span>
+                <span class="right-sidebar__base-item">
+                    @EmojiBank.Symbol(SymbolType.PerSecond) @((fieldObject.CooldownSeconds.BaseValue - 0.1d * (fieldObject.TimeLevel - 1)).Display())
+                </span>
             </div>
-            <div aria-label="Value">
-                <dt>@fieldObject.ResourceIcon</dt>
-                <dd>@fieldObject.ValueDisplay()</dd>
+
+            <dl class="right-sidebar__stats">
+                <div aria-label="Value">
+                    <dt>@fieldObject.ResourceIcon</dt>
+                    <dd>@fieldObject.ValueDisplay()</dd>
+                </div>
+                <div aria-label="Cooldown">
+                    <dt>@EmojiBank.Symbol(SymbolType.PerSecond)</dt>
+                    <dd>@fieldObject.CooldownDisplay()</dd>
+                </div>
+            </dl>
+        }
+        else
+        {
+            <div class="right-sidebar__empty" aria-label="No box selected">
+                <span class="right-sidebar__empty-icon">@EmojiBank.Symbol(SymbolType.Toolbox)</span>
             </div>
-            <div aria-label="Cooldown">
-                <dt>⏱️</dt>
-                <dd>@fieldObject.CooldownDisplay()</dd>
+        }
+    </div>
+
+    <section class="right-sidebar__passive-stats" aria-label="Passive stats">
+        <div class="right-sidebar__passive-divider" aria-hidden="true"></div>
+        @foreach (var type in Enum.GetValues<PassiveStatType>())
+        {
+            var starSlot = GameState.PassiveStatStarSlots.First(s => s.Type == type);
+            var hasStar = starSlot.HasStar;
+            var canDrop = GameState.CanPlacePassiveStatStar(type);
+            var slotClasses = $"right-sidebar__passive-star{(hasStar ? " right-sidebar__passive-star--filled" : string.Empty)}{(canDrop ? " right-sidebar__passive-star--drop-target" : string.Empty)}";
+            var stat = GameState.GetStatForPassive(type);
+
+            <div class="right-sidebar__passive-row" aria-label="@type.Emoji() stat">
+                <span class="right-sidebar__passive-emoji">@type.Emoji()</span>
+                @if (type == PassiveStatType.Stars)
+                {
+                    <div class="d-flex flex-column align-items-center flex-grow-1" style="min-width: 0;">
+                        <span class="right-sidebar__passive-value w-100">@GameState.EvaluatePassiveStat(type).Display() <span class="right-sidebar__base-value">(@stat.BaseValue.Display())</span></span>
+                        <button type="button"
+                                class="btn btn-primary btn-sm mt-1"
+                                style="font-size: 0.7rem; padding: 0.1rem 0.3rem; white-space: nowrap;"
+                                @onclick="GameState.UpgradeStars"
+                                disabled="@(!GameState.CanUpgradeStars())"
+                                aria-label="Upgrade stars">
+                            @EmojiBank.Symbol(SymbolType.Upgrade) @EmojiBank.Resource(ResourceType.ResearchPoint) @GameState.GetStarUpgradeCost().Display()
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <span class="right-sidebar__passive-value">@GameState.EvaluatePassiveStat(type).Display() <span class="right-sidebar__base-value">(@stat.BaseValue.Display())</span></span>
+                }
+                <div class="@slotClasses"
+                     @ondragover:preventDefault="true"
+                     @ondrop="@(() => GameState.TryPlacePassiveStatStar(type))">
+                    @if (hasStar)
+                    {
+                        <span class="right-sidebar__passive-star-icon" draggable="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
+                    }
+                    else
+                    {
+                        <span class="right-sidebar__passive-star-empty">@EmojiBank.Symbol(SymbolType.Stars)</span>
+                    }
+                </div>
             </div>
-            <div aria-label="Upgrade cost">
-                <dt>⚡</dt>
-                <dd>@fieldObject.UpgradeCostDisplay()</dd>
-            </div>
-        </dl>
-    }
+        }
+    </section>
 </aside>
 
 @code {
+    private DateTime _lastUpdate = DateTime.MinValue;
+
     protected override void OnInitialized()
     {
         GameState.Changed += OnGameStateChanged;
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
     }
 
-    private void OnUpgrade()
-        => GameState.UpgradeSelectedFieldObject();
+    private void OnUpgradeItem()
+        => GameState.UpgradeSelectedFieldObjectItem();
+
+    private void OnUpgradeTime()
+        => GameState.UpgradeSelectedFieldObjectTime();
 
     private void OnClose()
         => GameState.SelectFieldObject(null);
 
     private void OnGameStateChanged()
-        => _ = InvokeAsync(StateHasChanged);
+    {
+        // Handled by RequestUiUpdate
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
 
     public void Dispose()
     {
         GameState.Changed -= OnGameStateChanged;
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
     }
 }
-
