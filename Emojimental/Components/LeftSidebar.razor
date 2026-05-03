@@ -1,22 +1,30 @@
-﻿@using Emojimental.Models
+﻿@implements IDisposable
+@inject GameState GameState
+@using Emojimental.Models
 <aside class="left-sidebar">
     <nav class="left-sidebar__menu">
         <div class="left-sidebar__menu-item @(ActiveMenu == "Factory" ? "left-sidebar__menu-item--active" : "")" 
              @onclick='() => SetMenu("Factory")' title="Factory">
             @EmojiBank.Symbol(SymbolType.Factory)
         </div>
-        <div class="left-sidebar__menu-item @(ActiveMenu == "Research" ? "left-sidebar__menu-item--active" : "")" 
-             @onclick='() => SetMenu("Research")' title="Research">
-            @EmojiBank.Symbol(SymbolType.Research)
-        </div>
-        <div class="left-sidebar__menu-item @(ActiveMenu == "Stars" ? "left-sidebar__menu-item--active" : "")" 
-             @onclick='() => SetMenu("Stars")' title="Stars">
-            @EmojiBank.Symbol(SymbolType.Stars)
-        </div>
+        @if (GameState.CountFieldObjects(FieldNodeType.Researcher) > 0)
+        {
+            <div class="left-sidebar__menu-item @(ActiveMenu == "Research" ? "left-sidebar__menu-item--active" : "")" 
+                 @onclick='() => SetMenu("Research")' title="Research">
+                @EmojiBank.Symbol(SymbolType.Research)
+            </div>
+        }
+        @if (GameState.HasResearch(ResearchType.UnlockStars))
+        {
+            <div class="left-sidebar__menu-item @(ActiveMenu == "Stars" ? "left-sidebar__menu-item--active" : "")" 
+                 @onclick='() => SetMenu("Stars")' title="Stars">
+                @EmojiBank.Symbol(SymbolType.Stars)
+            </div>
+        }
     </nav>
 
     <div class="left-sidebar__content">
-        <div class="left-sidebar__content-top">
+        <div class="left-sidebar__scrollable">
             @switch (ActiveMenu)
             {
                 case "Factory":
@@ -30,14 +38,33 @@
                     break;
             }
         </div>
-        <div class="left-sidebar__content-bottom">
-            <ExchangeMenu />
-        </div>
+        <ExchangeMenu />
     </div>
 </aside>
 
 @code {
     private string ActiveMenu { get; set; } = "Factory";
+    private DateTime _lastUpdate = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastUpdate).TotalMilliseconds >= 500)
+        {
+            _lastUpdate = now;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
 
     private void SetMenu(string menu)
     {

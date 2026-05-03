@@ -22,21 +22,21 @@
             GameState.RequestUiUpdate += HandleUiUpdate;
         }
 
-        var snowIntensity = GetSnowIntensity();
+        var snowIntensity = GameState.IsWeatherDisabled ? 0f : GetSnowIntensity();
         if (Math.Abs(snowIntensity - _lastSnowIntensity) > 0.01f)
         {
             _lastSnowIntensity = snowIntensity;
             await JS.InvokeVoidAsync("emojimentalSnowfall.setSnowIntensity", snowIntensity / 2);
         }
 
-        var rainIntensity = GetRainIntensity();
+        var rainIntensity = GameState.IsWeatherDisabled ? 0f : GetRainIntensity();
         if (Math.Abs(rainIntensity - _lastRainIntensity) > 0.01f)
         {
             _lastRainIntensity = rainIntensity;
             await JS.InvokeVoidAsync("emojimentalSnowfall.setRainIntensity", rainIntensity / 2);
         }
 
-        var energyIntensity = GetEnergyIntensity();
+        var energyIntensity = GameState.IsWeatherDisabled ? 0f : GetEnergyIntensity();
         if (Math.Abs(energyIntensity - _lastEnergyIntensity) > 0.01f)
         {
             _lastEnergyIntensity = energyIntensity;

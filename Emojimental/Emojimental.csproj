@@ -12,4 +12,9 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.5" PrivateAssets="all"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="BGM_Snow_Theme_Loop.flac" />
+      <Content Include="BGM_Snow_Theme_Loop.flac" />
+    </ItemGroup>
+
 </Project>

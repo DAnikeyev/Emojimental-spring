@@ -3,9 +3,8 @@
 @implements IDisposable
 @inject Services.GameState GameState
 
-<section class="left-sidebar__section">
-
-@foreach (var boxType in DeployTypes)
+<section class="left-sidebar__section left-sidebar__section--factory">
+    @foreach (var boxType in DeployTypes.Where(IsUnlocked))
     {
         <article class="left-sidebar__card left-sidebar__card--compact left-sidebar__card--@boxType.CssModifier()">
             <div class="left-sidebar__card-header-main">
@@ -24,7 +23,14 @@
                         @onclick="() => GameState.AddFieldObject(boxType)"
                         disabled="@(!GameState.CanBuyFieldNode(boxType))"
                         aria-label="Add @boxType.DisplayName()">
-                    @EmojiBank.Resource(ResourceType.Energy)@GameState.GetFieldNodeCost(boxType).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)
+                    @if (GameState.IsFieldNodeMaxed(boxType))
+                    {
+                        @EmojiBank.Symbol(SymbolType.Done)
+                    }
+                    else
+                    {
+                        @EmojiBank.Resource(ResourceType.Coin)@GameState.GetFieldNodeCost(boxType).Display()
+                    }
                 </button>
             </div>
         </article>
@@ -54,15 +60,18 @@
         GameState.RequestUiUpdate -= OnRequestUiUpdate;
     }
 
+    private bool IsUnlocked(FieldNodeType type) => GameState.IsFactoryUnlocked(type);
+
     private static readonly FieldNodeType[] DeployTypes =
     [
         FieldNodeType.Snow,
         FieldNodeType.Energy,
+        FieldNodeType.Researcher,
         FieldNodeType.Smelter,
-        FieldNodeType.Garden,
+        FieldNodeType.Recycler,
+        FieldNodeType.Farm,
         FieldNodeType.Woodcutter,
         FieldNodeType.Builder,
-        FieldNodeType.Bonfire,
-        FieldNodeType.Recycler
+        FieldNodeType.Bonfire
     ];
 }

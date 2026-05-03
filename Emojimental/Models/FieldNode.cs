@@ -10,30 +10,37 @@ public sealed class FieldNode
     private BigDouble _temperatureValueMultiplier = BigDouble.One;
     private BigDouble _temperatureCooldownMultiplier = BigDouble.One;
     private BigDouble _beamValueMultiplier = BigDouble.One;
+    private BigDouble _beamCooldownMultiplier = BigDouble.One;
+    private BigDouble _beamCooldownReduction = BigDouble.Zero;
+    private bool _isHeld;
 
     public FieldNode(int id, FieldNodeType type, double x, double y)
     {
         Id = id;
-        Type = type;
+        Type = type.Normalize();
         X = x;
         Y = y;
 
-        CooldownSeconds.BaseValue = type switch
+        CooldownSeconds.BaseValue = Type switch
         {
-            FieldNodeType.Snow => 7d,
-            FieldNodeType.Smelter => 10d,
-            FieldNodeType.Garden => 5d,
-            FieldNodeType.Woodcutter => 8d,
+            FieldNodeType.Energy => 3d,
+            FieldNodeType.Snow => 3d,
+            FieldNodeType.Smelter => 6d,
+            FieldNodeType.Woodcutter => 5d,
             FieldNodeType.Builder => 15d,
             FieldNodeType.Bonfire => 12d,
             FieldNodeType.Recycler => 10d,
+            FieldNodeType.Researcher => 15d,
+            FieldNodeType.DustBreaker => 10d,
+            FieldNodeType.Farm => 5d,
             _ => 6d
         };
-;
-        CooldownSeconds.AddAdd(_ => -0.1d * (TimeLevel - 1));
         CooldownSeconds.AddClampMin(_ => MinCooldownSeconds);
         CooldownSeconds.AddMul(_ => _temperatureCooldownMultiplier);
-        OutputValue.AddAdd(_ => ItemLevel - 1);
+        CooldownSeconds.AddMul(_ => _beamCooldownMultiplier);
+        CooldownSeconds.AddAdd(_ => -_beamCooldownReduction);
+        CooldownSeconds.AddMul(_ => _isHeld ? 0.67d : 1d);
+        OutputValue.BaseValue = UpgradeLookup.GetProductivity(Type, ItemLevel);
         OutputValue.AddMul(_ => _beamValueMultiplier);
         OutputValue.AddMul(_ => _temperatureValueMultiplier);
     }
@@ -55,6 +62,8 @@ public sealed class FieldNode
     public int TimeLevel { get; private set; } = 1;
 
     public int ConnectionCount { get; private set; }
+    
+    public int RecycleQueue { get; private set; }
 
     public int BuilderLever { get; private set; } // 0: Market, 1: House
 
@@ -86,6 +95,17 @@ public sealed class FieldNode
 
     public string BaseCooldownDisplay() => CooldownSeconds.BaseValue.Display();
 
+    public bool UsesFlowerUpgrade => Type == FieldNodeType.Farm;
+
+    public BigDouble EvaluateFlowerProbability()
+        => UsesFlowerUpgrade ? new BigDouble((TimeLevel - 1) / 100d) : BigDouble.Zero;
+
+    public string FlowerProbabilityDisplay()
+        => $"{EvaluateFlowerProbability().ToDouble():P0}";
+
+    public string BaseFlowerProbabilityDisplay()
+        => $"{0:P0}";
+
     public BigDouble EvaluateValue()
     {
         _cachedValue ??= new EvaluationContext().Get(OutputValue);
@@ -99,6 +119,8 @@ public sealed class FieldNode
     }
 
     public string BaseValueDisplay() => OutputValue.BaseValue.Display();
+
+    public BigDouble GetBeamInputMultiplier() => _beamValueMultiplier;
 
     public void SetTemperatureValueMultiplier(BigDouble multiplier)
     {
@@ -117,6 +139,25 @@ public sealed class FieldNode
         _beamValueMultiplier = multiplier;
         InvalidateCache();
     }
+    
+    public void SetBeamCooldownMultiplier(BigDouble multiplier)
+    {
+        _beamCooldownMultiplier = multiplier;
+        InvalidateCache();
+    }
+
+    public void SetBeamCooldownReduction(BigDouble reduction)
+    {
+        _beamCooldownReduction = reduction;
+        InvalidateCache();
+    }
+
+    public void SetHeld(bool isHeld)
+    {
+        if (_isHeld == isHeld) return;
+        _isHeld = isHeld;
+        InvalidateCache();
+    }
 
     private BigDouble? _cachedCooldown;
     private string? _cachedCooldownDisplay;
@@ -132,10 +173,10 @@ public sealed class FieldNode
     }
 
     public BigDouble GetItemUpgradeCost()
-        => UpgradeLookup.GetItemUpgradeCost(ItemLevel);
+        => UpgradeLookup.GetItemUpgradeCost(Type, ItemLevel);
 
     public BigDouble GetTimeUpgradeCost()
-        => UpgradeLookup.GetTimeUpgradeCost(TimeLevel);
+        => UpgradeLookup.GetTimeUpgradeCost(Type, TimeLevel);
 
     public string ItemUpgradeCostDisplay()
         => GetItemUpgradeCost().Display();
@@ -146,25 +187,25 @@ public sealed class FieldNode
     public bool IsPaused { get; private set; }
     public bool IsActive { get; private set; } = true;
 
-    internal BigDouble Advance(double deltaSeconds, bool canProduce = true)
+    internal int Advance(double deltaSeconds, bool canProduce = true)
     {
         if (IsPaused)
         {
             IsActive = false;
-            return BigDouble.Zero;
+            return 0;
         }
 
         IsActive = canProduce;
         if (!canProduce)
-            return BigDouble.Zero;
+            return 0;
 
-        var cooldownMultiplier = _temperatureCooldownMultiplier;
-        if (Type == FieldNodeType.Bonfire)
+        if (Type == FieldNodeType.Recycler && RecycleQueue <= 0)
         {
-            cooldownMultiplier = BigDouble.One;
+            IsActive = false;
+            return 0;
         }
 
-        var cooldownSeconds = (EvaluateCooldown() * cooldownMultiplier).ToDouble();
+        var cooldownSeconds = EvaluateCooldown().ToDouble();
         if (double.IsNaN(cooldownSeconds) || double.IsInfinity(cooldownSeconds) || cooldownSeconds <= 0d)
             cooldownSeconds = MinCooldownSeconds;
 
@@ -175,18 +216,34 @@ public sealed class FieldNode
         {
             completedCycles = (int)Math.Floor(Progress);
             Progress -= completedCycles;
+
+            if (Type == FieldNodeType.Recycler)
+            {
+                var cyclesToConsume = Math.Min(completedCycles, RecycleQueue);
+                RecycleQueue -= cyclesToConsume;
+                completedCycles = cyclesToConsume;
+
+                if (RecycleQueue <= 0)
+                {
+                    Progress = 0;
+                }
+            }
         }
 
-        if (completedCycles == 0)
-            return BigDouble.Zero;
+        return completedCycles;
+    }
 
-        var valueMultiplier = _temperatureValueMultiplier;
-        if (Type == FieldNodeType.Bonfire)
-        {
-            valueMultiplier = BigDouble.One;
-        }
+    public void EnqueueRecycle()
+    {
+        if (Type != FieldNodeType.Recycler) return;
+        RecycleQueue++;
+    }
 
-        return EvaluateValue() * valueMultiplier * completedCycles;
+    public BigDouble GetGeneratedValue(int completedCycles)
+    {
+        if (completedCycles <= 0) return BigDouble.Zero;
+
+        return EvaluateValue() * completedCycles;
     }
 
     internal void ToggleBuilderLever()
@@ -199,15 +256,39 @@ public sealed class FieldNode
         IsPaused = !IsPaused;
     }
 
-    internal void UpgradeItem()
+    public void UpgradeItem()
     {
         ItemLevel += 1;
+        OutputValue.BaseValue = UpgradeLookup.GetProductivity(Type, ItemLevel);
         InvalidateCache();
     }
 
-    internal void UpgradeTime()
+    public void UpgradeTime()
     {
         TimeLevel += 1;
+        if (Type == FieldNodeType.Farm)
+        {
+            InvalidateCache();
+            return;
+        }
+
+        if (Type == FieldNodeType.DustBreaker || Type == FieldNodeType.Woodcutter)
+        {
+            CooldownSeconds.BaseValue *= 0.9;
+        }
+        else if (Type == FieldNodeType.Researcher)
+        {
+            CooldownSeconds.BaseValue -= 0.3d;
+        }
+        else if (Type == FieldNodeType.Smelter)
+        {
+            CooldownSeconds.BaseValue -= 0.15d;
+        }
+        else
+        {
+            CooldownSeconds.BaseValue -= 0.1d;
+        }
+
         InvalidateCache();
     }
 

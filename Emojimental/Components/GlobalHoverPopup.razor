@@ -1,0 +1,61 @@
+﻿@using Emojimental.Models
+@implements IDisposable
+@inject Services.GameState GameState
+
+@if (GameState.HoveredStar != null || GameState.HoveredPassiveStat != null)
+{
+    <dl class="global-hover-popup" style="left: @(GameState.HoveredInfoPosition.X)px; top: @(GameState.HoveredInfoPosition.Y)px;" aria-label="Hover info">
+        @if (GameState.HoveredStar != null)
+        {
+            var star = GameState.HoveredStar;
+            @if (star.Type == StarType.Yellow || star.Type == StarType.Legendary)
+            {
+                <div>
+                    <dt>@EmojiBank.Symbol(SymbolType.Factory) @EmojiBank.Symbol(SymbolType.Multiply)</dt>
+                    <dd>@star.ProductionMultiplier.Display()</dd>
+                </div>
+            }
+            @if (star.Type == StarType.Blue || star.Type == StarType.Legendary)
+            {
+                <div>
+                    <dt>@EmojiBank.Symbol(SymbolType.Second) @EmojiBank.Symbol(SymbolType.Minus)</dt>
+                    <dd>@star.CooldownReduction.ToString("F2")</dd>
+                </div>
+            }
+            <div class="star-popup__recycle">
+                <dt>@EmojiBank.Resource(ResourceType.StarDust)</dt>
+                <dd>@star.RecycleValue</dd>
+            </div>
+        }
+        else if (GameState.HoveredPassiveStat != null)
+        {
+            var type = GameState.HoveredPassiveStat.Value;
+            var starSlot = GameState.PassiveStatStarSlots.FirstOrDefault(s => s.Type == type);
+            <div>
+                <dt>@type.Emoji() @EmojiBank.Symbol(SymbolType.Arrow) @type.TargetEmoji()</dt>
+                <dd>@GameState.EvaluatePassiveStat(type).Display()</dd>
+                @if (starSlot?.Star != null)
+                {
+                    <dd>(@starSlot.Star.ProductionMultiplier.Display())</dd>
+                }
+            </div>
+        }
+    </dl>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    public void Dispose()
+    {
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+
+    private void OnRequestUiUpdate()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+}

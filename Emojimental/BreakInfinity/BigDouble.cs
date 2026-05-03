@@ -260,6 +260,19 @@ public readonly struct BigDouble :
         return mantissaText + "E" + e.ToString(CultureInfo.InvariantCulture);
     }
 
+    public static BigDouble Floor(BigDouble value)
+    {
+        if (value.Exponent < 0)
+        {
+            return value.Mantissa < 0 ? new BigDouble(-1) : BigDouble.Zero;
+        }
+
+        if (value.Exponent >= 17) return value;
+
+        var d = value.ToDouble();
+        return new BigDouble(Math.Floor(d));
+    }
+
     private static void Normalize(double mantissa, int exponent, out double mantissaOut, out int exponentOut)
     {
         if (double.IsNaN(mantissa) || mantissa == 0d)

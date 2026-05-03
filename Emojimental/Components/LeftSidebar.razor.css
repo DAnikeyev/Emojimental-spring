@@ -1,23 +1,24 @@
 ﻿.left-sidebar {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
     overflow: hidden;
     position: sticky;
-    top: 5rem;
+    top: 0;
     background: linear-gradient(180deg, #ffffff, #eef4ff);
     border: 1px solid #d8e2f3;
     border-radius: 1rem;
     box-shadow: 0 14px 30px rgba(39, 72, 121, 0.12);
-    width: 20rem;
+    width: 16.5rem;
 }
 
 .left-sidebar__menu {
     display: flex;
-    flex-direction: column;
-    width: 3rem;
-    border-right: 1px solid #d8e2f3;
+    flex-direction: row;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #d8e2f3;
     background: rgba(255, 255, 255, 0.5);
 }
 
@@ -25,11 +26,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: 1;
     height: 3rem;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     cursor: pointer;
     transition: background 0.2s;
-    border-bottom: 1px solid #d8e2f3;
+    border-right: 1px solid #d8e2f3;
+}
+
+.left-sidebar__menu-item:last-child {
+    border-right: none;
 }
 
 .left-sidebar__menu-item:hover {
@@ -38,7 +44,7 @@
 
 .left-sidebar__menu-item--active {
     background: rgba(69, 185, 211, 0.2);
-    border-left: 3px solid #45b9d3;
+    border-top: 3px solid #45b9d3;
 }
 
 .left-sidebar__content {
@@ -47,7 +53,24 @@
     flex-direction: column;
     min-width: 0;
     overflow: hidden;
-    padding: 0.5rem;
+    padding: 0.35rem;
+}
+
+::deep .left-sidebar__section,
+::deep .left-sidebar__section--research,
+::deep .left-sidebar__section--factory {
+    gap: 0.4rem;
+    padding: 0.35rem;
+}
+
+::deep .left-sidebar__section-header {
+    gap: 0.5rem;
+}
+
+::deep .left-sidebar__badge,
+::deep .left-sidebar__count {
+    min-width: 2.1rem;
+    padding: 0.25rem 0.5rem;
 }
 
 .left-sidebar__content-top {
@@ -61,9 +84,28 @@
     overflow-y: auto;
 }
 
-@media (max-width: 1100px) {
-    .left-sidebar {
-        position: static;
-        height: auto;
-    }
+.left-sidebar__content-top::-webkit-scrollbar {
+    width: 4px;
+}
+
+.left-sidebar__content-top::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.left-sidebar__content-top::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+
+.left-sidebar__content-bottom::-webkit-scrollbar {
+    width: 4px;
+}
+
+.left-sidebar__content-bottom::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.left-sidebar__content-bottom::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.1);
+    border-radius: 4px;
 }

@@ -7,7 +7,7 @@
     min-height: 18rem;
     height: 100%;
     min-height: 0;
-    overflow: auto;
+    overflow: hidden;
     position: sticky;
     top: 5rem;
     border-radius: 1rem;
@@ -58,71 +58,52 @@
     padding: 0;
 }
 
-.right-sidebar__stats {
-    display: grid;
-    gap: 0.75rem;
-    margin: 0;
+
+.right-sidebar__upgrade-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
 }
 
-.right-sidebar__stats div {
+.right-sidebar__stat-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.85rem 0.9rem;
-    border-radius: 0.85rem;
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #d8e2f3;
+    width: 100%;
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
-.right-sidebar__stats dt,
-.right-sidebar__stats dd {
-    margin: 0;
-}
-
-.right-sidebar__stats dt {
-    font-size: 1.15rem;
-    color: #5b6880;
-}
-
-.right-sidebar__stats dd {
-    font-weight: 700;
-    color: #1f2a44;
-}
-
-.right-sidebar__upgrade-row {
+.right-sidebar__stat-box {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(255, 250, 236, 0.98);
+    border: 1px solid rgba(241, 180, 61, 0.42);
+    border-radius: 0.65rem;
+    padding: 0 0.3rem;
+    width: 100%;
+    min-height: 2.5rem;
+    box-shadow: 0 4px 10px rgba(39, 72, 121, 0.1);
+}
+
+.right-sidebar__button-row {
     margin-bottom: 0.5rem;
 }
 
 .right-sidebar__upgrade-btn {
-    flex: 1;
-    min-height: 3.25rem;
+    width: 100%;
+    min-height: 2.5rem;
     font-size: 0.9rem;
     font-weight: 700;
     padding: 0.25rem;
-}
-
-.right-sidebar__base-info {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid #d8e2f3;
-    font-size: 0.85rem;
-    color: #5b6880;
+    gap: 0.3rem;
 }
 
-.right-sidebar__base-item {
-    display: flex;
-    align-items: center;
-    gap: 0.2rem;
-    white-space: nowrap;
-}
 
 .right-sidebar__passive-stats {
     display: flex;

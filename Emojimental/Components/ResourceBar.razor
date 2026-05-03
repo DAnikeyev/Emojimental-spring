@@ -2,41 +2,54 @@
 @using Emojimental.Services
 @implements IDisposable
 @inject GameState GameState
+@inject IJSRuntime JSRuntime
 
 <div class="resource-bar">
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.Energy" Value="GameState.Energy" Label="Energy" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    @if (GameState.IsResourceUnlocked(ResourceType.Coin))
+    {
+        <ResourceItem Type="ResourceType.Coin" Value="GameState.Coin" Label="Coin"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.Ice))
+    {
+        <ResourceItem Type="ResourceType.Ice" Value="GameState.Ice" Label="Snow"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.ResearchPoint))
+    {
+        <ResourceItem Type="ResourceType.ResearchPoint" Value="GameState.ResearchPoint" Label="Research"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.Energy))
+    {
+        <ResourceItem Type="ResourceType.Energy" Value="GameState.Energy" Label="Energy"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.Water))
+    {
+        <ResourceItem Type="ResourceType.Water" Value="GameState.Water" Label="Water"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.StarDust))
+    {
+        <ResourceItem Type="ResourceType.StarDust" Value="GameState.StarDust" Label="StarDust"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.Tree))
+    {
+        <ResourceItem Type="ResourceType.Tree" Value="GameState.Tree" Label="Tree"/>
+    }
+    @if (GameState.IsResourceUnlocked(ResourceType.Wood))
+    {
+        <ResourceItem Type="ResourceType.Wood" Value="GameState.Wood" Label="Wood"/>
+    }
+    <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    <div class="timer-and-volume">
+        <span class="timer">@FormatPlayTime(GameState.PlayTime)</span>
+        <div class="volume-control">
+            <button class="weather-button" @onclick="GameState.ToggleWeather">
+                @(GameState.IsWeatherDisabled ? "🚫🌧️" : "🌧️")
+            </button>
+            <button class="mute-button" @onclick="ToggleMute">
+                @((GameState.IsMuted || GetVolume() == 0) ? "🔇" : EmojiBank.Symbol(SymbolType.Music))
+            </button>
+            <input type="range" min="0" max="1" step="0.01" value="@GetVolume()" @oninput="UpdateVolume" />
+        </div>
     </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.Ice" Value="GameState.Ice" Label="Snow" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.Water" Value="GameState.Water" Label="Water" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.Coin" Value="GameState.Coin" Label="Coin" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.Tree" Value="GameState.Tree" Label="Tree" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.Wood" Value="GameState.Wood" Label="Wood" />
-        <button class="cheat-button" @onclick="GameState.CheatWood">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.ResearchPoint" Value="GameState.ResearchPoint" Label="Research" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <div class="resource-group">
-        <ResourceItem Type="ResourceType.StarDust" Value="GameState.StarDust" Label="StarDust" />
-        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
-    </div>
-    <span class="timer">@FormatPlayTime(GameState.PlayTime)</span>
 </div>
 
 @code {
@@ -50,12 +63,54 @@
         return $"{hh:D2}:{mm:D2}:{ss:D2}:{ff:D2}";
     }
 
-    private DateTime _lastUpdate = DateTime.MinValue;
-
     protected override void OnInitialized()
     {
         GameState.Changed += OnGameStateChanged;
         GameState.RequestUiUpdate += OnRequestUiUpdate;
+    }
+
+    private double GetVolume()
+    {
+        if (GameState.IsMuted) return 0;
+        return GameState.MusicVolume.BaseValue.ToDouble();
+    }
+
+    private async Task ToggleMute()
+    {
+        GameState.ToggleMute();
+        await JSRuntime.InvokeVoidAsync("audioManager.setVolume", GetVolume());
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var volume = GetVolume();
+                await JSRuntime.InvokeVoidAsync("audioManager.playBGM", "audio/BGM_Snow_Theme_Loop.flac", volume);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG_LOG] Error playing BGM on first render: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task UpdateVolume(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var volume))
+        {
+            GameState.SetMusicVolume(volume);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("audioManager.setVolume", GetVolume());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG_LOG] Error updating volume: {ex.Message}");
+            }
+        }
     }
 
     private void OnGameStateChanged()
@@ -65,12 +120,7 @@
 
     private void OnRequestUiUpdate()
     {
-        var now = DateTime.UtcNow;
-        if ((now - _lastUpdate).TotalMilliseconds >= 500)
-        {
-            _lastUpdate = now;
-            InvokeAsync(StateHasChanged);
-        }
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

@@ -27,10 +27,10 @@
             </div>
         }
         
-        @if (_isStarEventActive)
+        @foreach (var star in _activeStars)
         {
-            <div class="field-star-event @(_isStarExploding ? "field-star-event--exploding" : "")" 
-                 style="left: @($"{_starX.ToString("F1", CultureInfo.InvariantCulture)}%") ; top: @($"{_starY.ToString("F1", CultureInfo.InvariantCulture)}%") ;">
+            <div class="field-star-event @(star.IsExploding ? "field-star-event--exploding" : "")" 
+                 style="left: @($"{star.X.ToString("F1", CultureInfo.InvariantCulture)}%") ; top: @($"{star.Y.ToString("F1", CultureInfo.InvariantCulture)}%") ;">
             </div>
         }
 
@@ -44,20 +44,12 @@
                  @onpointerdown:preventDefault="true"
                  @onclick:stopPropagation="true"
                  aria-label="Open @fieldObject.TypeDisplayName details">
-                <div class="field-node__type">@fieldObject.Icon</div>
-                
-                <button type="button" 
-                        class="field-node__pause @(fieldObject.IsPaused ? "field-node__pause--paused" : "")"
-                        @onclick="@(() => GameState.ToggleFieldObjectPause(fieldObject.Id))"
-                        @onclick:stopPropagation="true"
-                        @onpointerdown:stopPropagation="true">
-                    @(fieldObject.IsPaused ? "▶️" : "⏸️")
-                </button>
+                 <div class="field-node__type">@fieldObject.Icon</div>
 
-                @if (fieldObject.Type == FieldNodeType.Builder)
-                {
-                    <button type="button"
-                            class="field-node__lever"
+                 @if (fieldObject.Type == FieldNodeType.Builder)
+                 {
+                     <button type="button"
+                             class="field-node__lever"
                             @onclick="@(() => GameState.ToggleFieldObjectLever(fieldObject.Id))"
                             @onclick:stopPropagation="true"
                             @onpointerdown:stopPropagation="true"
@@ -66,18 +58,23 @@
                     </button>
                 }
 
-                <div class="field-node__tier">I</div>
-
                 <div class="field-node__progress" aria-label="@fieldObject.TypeDisplayName progress">
-                    <div class="field-node__progress-fill"
-                         style="width:@FormatPercent(fieldObject.ProgressPercent)"></div>
+                    @if (UsesFastProgressIndicator(fieldObject))
+                    {
+                        <div class="field-node__progress-fast" aria-hidden="true">@EmojiBank.Symbol(SymbolType.FastProgress)</div>
+                    }
+                    else
+                    {
+                        <div class="field-node__progress-fill"
+                             style="width:@FormatPercent(fieldObject.ProgressPercent)"></div>
+                    }
                 </div>
 
                 <div class="field-node__stats field-node__stats--top">
-                    <span>@EmojiBank.Symbol(SymbolType.PerSecond) @fieldObject.CooldownDisplay() <span class="base-value">(@fieldObject.BaseCooldownDisplay())</span></span>
+                    <span>@EmojiBank.Symbol(SymbolType.Second) @fieldObject.CooldownDisplay() <span class="base-value">(@fieldObject.BaseCooldownDisplay())</span></span>
                 </div>
 
-                <div class="field-node__core">
+                <div class="field-node__core @(fieldObject.Type == FieldNodeType.Bonfire ? "field-node__core--compact" : string.Empty)">
                     <span>@fieldObject.Type.Effect()</span>
                 </div>
 
@@ -89,6 +86,10 @@
                          @onclick:stopPropagation="true"
                          @onpointerdown:stopPropagation="true">
                         @EmojiBank.Symbol(SymbolType.Stars)
+                        @if (fieldObject.RecycleQueue > 0)
+                        {
+                            <span class="field-node__recycler-queue">@fieldObject.RecycleQueue</span>
+                        }
                     </div>
                 }
 
@@ -108,15 +109,24 @@
                                         @onclick:stopPropagation="true"
                                         @onpointerdown:stopPropagation="true"
                                         aria-label="Star modifiers">
-                                    ⭐
+                                    <div class="left-sidebar__star-icon @GetStarIconClasses(beamStarSlot.Star!)">
+                                        @EmojiBank.Symbol(SymbolType.Stars)
+                                    </div>
                                 </button>
 
                                 <dl class="field-node__star-popup" aria-label="Star modifiers">
-                                    @foreach (var modifier in GameState.StarModifiers)
+                                    @if (beamStarSlot.Star!.Type == StarType.Yellow || beamStarSlot.Star!.Type == StarType.Legendary)
                                     {
                                         <div>
-                                            <dt>⭐</dt>
-                                            <dd>@modifier</dd>
+                                            <dt>@EmojiBank.Symbol(SymbolType.Factory) @EmojiBank.Symbol(SymbolType.Multiply)</dt>
+                                            <dd>@beamStarSlot.Star!.ProductionMultiplier.Display()</dd>
+                                        </div>
+                                    }
+                                    @if (beamStarSlot.Star!.Type == StarType.Blue || beamStarSlot.Star!.Type == StarType.Legendary)
+                                    {
+                                        <div>
+                                            <dt>@EmojiBank.Symbol(SymbolType.Second) @EmojiBank.Symbol(SymbolType.Minus)</dt>
+                                            <dd>@beamStarSlot.Star!.CooldownReduction.ToString("F2")</dd>
                                         </div>
                                     }
                                 </dl>
@@ -126,7 +136,7 @@
                 }
 
                 <div class="field-node__stats field-node__stats--bottom">
-                    <span>@fieldObject.ResourceIcon @fieldObject.ValueDisplay() <span class="base-value">(@fieldObject.BaseValueDisplay())</span></span>
+                    <span>@fieldObject.ResourceIcon @GameState.GetDisplayedFactoryValue(fieldObject).Display() <span class="base-value">(@GameState.GetDisplayedFactoryBaseValue(fieldObject).Display())</span></span>
                 </div>
             </div>
         }
@@ -139,9 +149,11 @@
     private ElementReference _surface;
     private DotNetObjectReference<Field>? _selfReference;
     private DragState? _dragState;
+    private int? _heldFieldObjectId;
     private bool _isObservingSurface;
     private bool _suppressSurfaceClick;
     private bool _disposed;
+    private static readonly Random _random = new();
 
     private string FieldWidthPx => $"{GameState.FieldWidth.ToString("F0", CultureInfo.InvariantCulture)}px";
     private string FieldHeightPx => $"{GameState.FieldHeight.ToString("F0", CultureInfo.InvariantCulture)}px";
@@ -149,12 +161,15 @@
     private bool IsSunVisible => GameState.DayCyclePosition is > 0.25 and < 0.75;
     private bool IsMoonVisible => GameState.DayCyclePosition is <= 0.25 or >= 0.75;
 
-    private bool _isStarEventActive;
-    private bool _isStarExploding;
-    private double _starX = 0;
-    private double _starY = 0;
     private int _lastStarCycle = -1;
-    private int _starsRemainingInEvent = 0;
+    private readonly List<StarVisual> _activeStars = new();
+
+    private class StarVisual
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public bool IsExploding { get; set; }
+    }
 
     private double SkyDayOpacity
     {
@@ -181,9 +196,10 @@
     {
         GameState.Changed += OnGameStateChanged;
         GameState.RequestUiUpdate += OnRequestUiUpdate;
+        GameState.OnResourceProduced += OnResourceProduced;
 
         // Initialize _lastStarCycle to current cycle to avoid triggering event on launch
-        _lastStarCycle = (int)Math.Floor(GameState.PlayTime.TotalSeconds / 15.0);
+        _lastStarCycle = (int)Math.Floor(GameState.PlayTime.TotalSeconds / 30.0);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -198,14 +214,19 @@
 
     private void OnPointerDown(FieldNode fieldObject, PointerEventArgs args)
     {
+        var pointerOffsetX = GetSurfacePointerX(args) - fieldObject.X;
+        var pointerOffsetY = GetSurfacePointerY(args) - fieldObject.Y;
+
         GameState.SelectFieldObject(fieldObject.Id);
         _dragState = new DragState(
             fieldObject.Id,
             args.ClientX,
             args.ClientY,
-            args.ClientX - fieldObject.X,
-            args.ClientY - fieldObject.Y,
+            pointerOffsetX,
+            pointerOffsetY,
             false);
+        _heldFieldObjectId = fieldObject.Id;
+        GameState.SetFieldNodeHeld(fieldObject.Id, true);
     }
 
     private void OnPointerMove(PointerEventArgs args)
@@ -221,13 +242,19 @@
         if (!_dragState.Value.HasMoved)
             _dragState = _dragState.Value with { HasMoved = true };
 
-        var targetX = args.ClientX - _dragState.Value.PointerOffsetX;
-        var targetY = args.ClientY - _dragState.Value.PointerOffsetY;
+        var targetX = GetSurfacePointerX(args) - _dragState.Value.PointerOffsetX;
+        var targetY = GetSurfacePointerY(args) - _dragState.Value.PointerOffsetY;
         GameState.MoveFieldObject(_dragState.Value.FieldObjectId, targetX, targetY);
     }
 
     private void OnPointerUp(PointerEventArgs _)
     {
+        if (_heldFieldObjectId is int heldId)
+        {
+            GameState.SetFieldNodeHeld(heldId, false);
+            _heldFieldObjectId = null;
+        }
+
         if (_dragState is null)
             return;
 
@@ -246,6 +273,12 @@
 
     private void OnPointerLeave(PointerEventArgs _)
     {
+        if (_heldFieldObjectId is int heldId)
+        {
+            GameState.SetFieldNodeHeld(heldId, false);
+            _heldFieldObjectId = null;
+        }
+
         _dragState = null;
     }
 
@@ -277,84 +310,137 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private async void OnResourceProduced(FieldNode node, int cycles)
+    {
+        var countPerCompletion = Math.Min(5, (int)Math.Floor(1 + Math.Log(node.Level, 1.5)));
+        var count = countPerCompletion * Math.Max(1, cycles);
+        
+        try
+        {
+            var bounds = await JS.InvokeAsync<FieldBounds>("emojimentalField.getBounds", _surface);
+            
+            var x = (bounds.Left + node.X + FieldNode.Size / 2) / (double)await JS.InvokeAsync<int>("eval", "window.innerWidth") * 100;
+            var y = (bounds.Top + node.Y + FieldNode.Size / 2) / (double)await JS.InvokeAsync<int>("eval", "window.innerHeight") * 100;
+            var icon = node.ResourceIcon;
+
+            _ = JS.InvokeVoidAsync("emojimentalSnowfall.addResourceParticles", x, y, icon, count, 0.5);
+        }
+        catch
+        {
+            // Ignore errors if surface is not ready or JS is disconnected
+        }
+    }
+
     private void UpdateStarEvent()
     {
+        if (!GameState.HasResearch(ResearchType.UnlockStars)) return;
+
         var p = GameState.DayCyclePosition;
         // Midnight is at p = 0.
         
-        if (p < 0.05 && !_isStarEventActive)
+        if (p < 0.05 && _activeStars.Count == 0)
         {
-            var currentCycle = (int)Math.Floor(GameState.PlayTime.TotalSeconds / 15.0);
+            var currentCycle = (int)Math.Floor(GameState.PlayTime.TotalSeconds / 30.0);
             if (currentCycle > _lastStarCycle)
             {
                 _lastStarCycle = currentCycle;
-                _starsRemainingInEvent = (int)GameState.EvaluatePassiveStat(PassiveStatType.Stars).ToDouble();
-                _ = RunStarEvent();
+                var starsToSpawn = (int)GameState.EvaluatePassiveStat(PassiveStatType.Stars).ToDouble();
+                for (int i = 0; i < starsToSpawn; i++)
+                {
+                    var delayMs = starsToSpawn > 1 ? (int)(10000.0 * i / (starsToSpawn - 1)) : 0;
+                    _ = RunSingleStarFall(delayMs);
+                }
             }
         }
     }
 
-    private async Task RunStarEvent()
+    private static bool UsesFastProgressIndicator(FieldNode fieldObject)
     {
-        _isStarEventActive = true;
-        
-        while (_starsRemainingInEvent > 0)
+        var cooldownSeconds = fieldObject.EvaluateCooldown().ToDouble();
+        return !double.IsNaN(cooldownSeconds)
+               && !double.IsInfinity(cooldownSeconds)
+               && cooldownSeconds <= 0.2d;
+    }
+
+    private async Task RunSingleStarFall(int delayMs)
+    {
+        if (delayMs > 0)
         {
-            _isStarExploding = false;
-            // Start from moon position (top-right, approx 90, 5)
-            _starX = 90;
-            _starY = 5;
-            StateHasChanged();
-
-            // Meteorite behavior: flies to the ground (bottom of field)
-            // Field bottom is y=100 (in %)
-            // Let's pick a random X for landing
-            var targetX = 20 + new Random().NextDouble() * 60;
-            var targetY = 95;
-
-            var steps = 40;
-            var startX = _starX;
-            var startY = _starY;
-            
-            for (int i = 0; i <= steps; i++)
-            {
-                var t = i / (double)steps;
-                _starX = startX + (targetX - startX) * t;
-                _starY = startY + (targetY - startY) * t;
-                
-                _ = JS.InvokeVoidAsync("emojimentalSnowfall.addStarTrail", _starX, _starY);
-                
-                StateHasChanged();
-                await Task.Delay(16);
-            }
-
-            // Explode
-            _isStarExploding = true;
-            _ = JS.InvokeVoidAsync("emojimentalSnowfall.addStarExplosion", _starX, _starY);
-            StateHasChanged();
-            
-            GameState.AddStarToInventory();
-            
-            await Task.Delay(500);
-            _isStarExploding = false;
-            _starsRemainingInEvent--;
-            
-            if (_starsRemainingInEvent > 0)
-            {
-                await Task.Delay(300); // delay between stars
-            }
+            await Task.Delay(delayMs);
         }
 
-        _isStarEventActive = false;
+        var star = new StarVisual
+        {
+            X = 90.0,
+            Y = 5.0,
+            IsExploding = false
+        };
+
+        lock (_activeStars)
+        {
+            _activeStars.Add(star);
+        }
+
+        // Meteorite behavior: flies to the ground (bottom of field)
+        // Field bottom is y=100 (in %)
+        // Let's pick a random X for landing
+        var targetX = 20 + _random.NextDouble() * 60;
+        var targetY = 95;
+
+        var steps = 40;
+        var startX = star.X;
+        var startY = star.Y;
+        
+        for (int i = 0; i <= steps; i++)
+        {
+            var t = i / (double)steps;
+            star.X = startX + (targetX - startX) * t;
+            star.Y = startY + (targetY - startY) * t;
+            
+            _ = JS.InvokeVoidAsync("emojimentalSnowfall.addStarTrail", star.X, star.Y);
+            
+            StateHasChanged();
+            await Task.Delay(16);
+        }
+
+        // Explode
+        star.IsExploding = true;
+        _ = JS.InvokeVoidAsync("emojimentalSnowfall.addStarExplosion", star.X, star.Y);
+        StateHasChanged();
+        
+        GameState.AddStarToInventory();
+        
+        await Task.Delay(500);
+        
+        lock (_activeStars)
+        {
+            _activeStars.Remove(star);
+        }
         StateHasChanged();
     }
 
     [JSInvokable]
-    public Task OnSurfaceResized(double width, double height)
+    public Task OnSurfaceResized(double width, double height, double renderedWidth, double renderedHeight, double renderedLeft, double renderedTop)
     {
+        _surfaceLogicalWidth = width;
+        _surfaceLogicalHeight = height;
+        _surfaceRenderedWidth = renderedWidth;
+        _surfaceRenderedHeight = renderedHeight;
+        _surfaceRenderedLeft = renderedLeft;
+        _surfaceRenderedTop = renderedTop;
         GameState.SetFieldSize(width, height);
         return Task.CompletedTask;
     }
+
+    private double ScaleX => _surfaceLogicalWidth <= 0 ? 1 : _surfaceRenderedWidth / _surfaceLogicalWidth;
+
+    private double ScaleY => _surfaceLogicalHeight <= 0 ? 1 : _surfaceRenderedHeight / _surfaceLogicalHeight;
+
+    private double GetSurfacePointerX(PointerEventArgs args)
+        => (args.ClientX - _surfaceRenderedLeft) / ScaleX;
+
+    private double GetSurfacePointerY(PointerEventArgs args)
+        => (args.ClientY - _surfaceRenderedTop) / ScaleY;
 
 
     private static string FormatPercent(double value)
@@ -362,6 +448,9 @@
 
     private IEnumerable<BeamStarSlot> GetBeamStarSlots(int fieldObjectId)
     {
+        if (!GameState.AreFactoryStarSlotsUnlocked())
+            yield break;
+
         // Pre-group once per render to avoid O(N²) scanning
         var allSlots = GameState.BeamStarSlots;
         for (var i = 0; i < allSlots.Count; i++)
@@ -385,6 +474,14 @@
         return $"field-node__beam-slot field-node__beam-slot--{beamStarSlot.SourceSide.ToString().ToLowerInvariant()}";
     }
 
+    private static string GetStarIconClasses(Star star)
+        => star.Type switch
+        {
+            StarType.Legendary => "star--legendary",
+            StarType.Blue => "star--rare",
+            _ => string.Empty
+        };
+
     private static string GetFieldObjectClasses(FieldNode fieldObject, int? draggingId, int? selectedId)
     {
         var classes = new List<string> { "field-node", $"field-node--{fieldObject.Type.CssModifier()}" };
@@ -403,6 +500,7 @@
         _disposed = true;
         GameState.Changed -= OnGameStateChanged;
         GameState.RequestUiUpdate -= OnRequestUiUpdate;
+        GameState.OnResourceProduced -= OnResourceProduced;
         _selfReference?.Dispose();
     }
 
@@ -428,6 +526,13 @@
         double PointerOffsetX,
         double PointerOffsetY,
         bool HasMoved);
+
+    private double _surfaceLogicalWidth = 1;
+    private double _surfaceLogicalHeight = 1;
+    private double _surfaceRenderedWidth = 1;
+    private double _surfaceRenderedHeight = 1;
+    private double _surfaceRenderedLeft;
+    private double _surfaceRenderedTop;
 
     private readonly record struct FieldBounds(double Left, double Top);
 }

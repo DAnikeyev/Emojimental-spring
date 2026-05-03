@@ -18,7 +18,7 @@
 
         const notify = () => {
             const rect = element.getBoundingClientRect();
-            dotNetRef.invokeMethodAsync("OnSurfaceResized", rect.width, rect.height);
+            dotNetRef.invokeMethodAsync("OnSurfaceResized", element.offsetWidth, element.offsetHeight, rect.width, rect.height, rect.left, rect.top);
         };
 
         const observer = new ResizeObserver(() => notify());

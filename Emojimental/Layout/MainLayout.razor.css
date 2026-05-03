@@ -1,11 +1,28 @@
+.page-viewport {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.page-stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: center center;
+}
+
 .page {
     position: relative;
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    min-height: 100dvh;
-    background: linear-gradient(180deg, #f7fbff, #edf3fb);
+    width: 1920px;
+    height: 937px;
+    min-height: 937px;
+    background: linear-gradient(180deg, var(--app-bg-top, #f7fbff), var(--app-bg-bottom, #edf3fb));
+    color: var(--app-text, #1f2a44);
     overflow: hidden;
+    transition: background 0.5s ease, color 0.5s ease;
 }
 
 main {
@@ -19,7 +36,7 @@ article {
     flex: 1;
     min-width: 0;
     min-height: 0;
-    padding: 1rem 0 1.25rem 0.5rem;
+    padding: 1.5rem 1rem 1.5rem 1rem;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -27,24 +44,29 @@ article {
 .top-row {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
     padding: 0.85rem 1.25rem;
-    background: rgba(255, 255, 255, 0.92);
-    border-bottom: 1px solid #d8e2f3;
+    background: var(--app-surface, rgba(255, 255, 255, 0.92));
+    border-bottom: 1px solid var(--app-border, #d8e2f3);
     backdrop-filter: blur(10px);
-    min-height: 4rem;
-    display: flex;
+    min-height: 4.5rem;
     position: sticky;
     top: 0;
     z-index: 10;
+    transition: background 0.5s ease, border-bottom 0.5s ease;
 }
 
 .top-row__brand {
     font-size: 1.65rem;
     font-weight: 800;
-    color: #1f2a44;
+    color: var(--app-accent, #1f2a44);
     white-space: nowrap;
     line-height: 1;
+    text-shadow: 0 2px 4px var(--app-shadow, rgba(0,0,0,0.1));
+    background: var(--app-surface-strong);
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--app-border);
 }
 
 .top-row__resources {
@@ -52,16 +74,11 @@ article {
     min-width: 0;
 }
 
-@media (max-width: 640.98px) {
-    .top-row {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-}
-
-@media (min-width: 641px) {
-    article {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
+article {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 1.5rem 1rem 1.5rem 1rem;
+    box-sizing: border-box;
+    overflow: hidden;
 }

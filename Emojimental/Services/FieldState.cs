@@ -223,13 +223,13 @@ public sealed class FieldState
         }
     }
 
-    public bool TryPlaceStar(int sourceFieldNodeId, FieldNodeSide sourceSide)
+    public bool TryPlaceStar(int sourceFieldNodeId, FieldNodeSide sourceSide, Star star)
     {
-        var slotIndex = _beamStarSlots.FindIndex(slot => slot.SourceFieldNodeId == sourceFieldNodeId && slot.SourceSide == sourceSide && !slot.HasStar);
+        var slotIndex = _beamStarSlots.FindIndex(slot => slot.SourceFieldNodeId == sourceFieldNodeId && slot.SourceSide == sourceSide);
         if (slotIndex < 0)
             return false;
 
-        _beamStarSlots[slotIndex] = _beamStarSlots[slotIndex] with { HasStar = true };
+        _beamStarSlots[slotIndex] = _beamStarSlots[slotIndex] with { Star = star };
         return true;
     }
 

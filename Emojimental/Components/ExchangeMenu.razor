@@ -3,34 +3,13 @@
 @implements IDisposable
 @inject Services.GameState GameState
 
-<section class="left-sidebar__section">
-    <div class="left-sidebar__section-header" aria-label="Exchange">
-        <span class="left-sidebar__section-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Exchange)</span>
+<section class="left-sidebar__section left-sidebar__section--exchange">
+    <div class="left-sidebar__section-header">
+        <span class="left-sidebar__section-icon">@EmojiBank.Symbol(SymbolType.Exchange)</span>
     </div>
 
-    @* Research Point Block *@
-    <article class="left-sidebar__card left-sidebar__card--exchange">
-        <div class="left-sidebar__card-header">
-            <div>
-                <span class="left-sidebar__icon">@EmojiBank.Resource(ResourceType.ResearchPoint)</span>
-                <span class="left-sidebar__count">@GameState.EvaluateStat(GameState.ResearchPoint).Display()</span>
-            </div>
-            <button type="button"
-                    class="btn btn-primary btn-sm left-sidebar__wide-button"
-                    @onclick="() => GameState.BuyResearchPoint()"
-                    disabled="@(!GameState.CanBuyResearchPoint())">
-                @GameState.GetResearchPointCost().Display() @EmojiBank.Resource(ResourceType.Energy)
-            </button>
-        </div>
-        <div class="exchange-snowman-content">
-            <div class="exchange-line-2">
-                @EmojiBank.Symbol(SymbolType.Research) @EmojiBank.Symbol(SymbolType.Arrow) 💡
-            </div>
-        </div>
-    </article>
-
     @* Snowman Block *@
-    <article class="left-sidebar__card left-sidebar__card--exchange">
+    <article class="left-sidebar__card left-sidebar__card--exchange left-sidebar__card--compact">
         <div class="left-sidebar__card-header">
             <div>
                 <span class="left-sidebar__icon">@EmojiBank.Symbol(SymbolType.Snowman)</span>
@@ -46,67 +25,87 @@
 
         <div class="exchange-snowman-content">
             <div class="exchange-line-2">
-                @(GameState.SnowmanCoinIncomePerSecond.Display())@EmojiBank.Resource(ResourceType.Coin) @(GameState.SnowmanHappinessIncomePerSecond.Display())@EmojiBank.Resource(ResourceType.Happiness) / @EmojiBank.Symbol(SymbolType.PerSecond)
+                @(GameState.SnowmanCoinIncomePerSecond.Display())@EmojiBank.Resource(ResourceType.Coin)
+                @if (GameState.HasResearch(ResearchType.UnlockHappiness))
+                {
+                    <text> </text>@(GameState.SnowmanCarrotIncomePerSecond.Display())@EmojiBank.Resource(ResourceType.Carrot)
+                }
+                / @EmojiBank.Symbol(SymbolType.Second)
             </div>
         </div>
     </article>
 
     @* Sapling Block *@
-    <article class="left-sidebar__card left-sidebar__card--exchange">
-        <div class="left-sidebar__card-header">
-            <div>
-                <span class="left-sidebar__icon">🌱</span>
-                <span class="left-sidebar__count">@GameState.SaplingCount</span>
+    @if (GameState.HasResearch(ResearchType.UnlockSaplings))
+    {
+        <article class="left-sidebar__card left-sidebar__card--exchange left-sidebar__card--compact">
+            <div class="left-sidebar__card-header">
+                <div>
+                    <span class="left-sidebar__icon">@EmojiBank.Resource(ResourceType.Sapling)</span>
+                    <span class="left-sidebar__count">@GameState.SaplingCount</span>
+                </div>
+                <button type="button"
+                        class="btn btn-primary btn-sm left-sidebar__wide-button"
+                        @onclick="() => GameState.BuySapling()"
+                        disabled="@(!GameState.CanBuySapling())">
+                    @GameState.GetSaplingCost().Display() @EmojiBank.Resource(ResourceType.Coin)
+                </button>
             </div>
-            <button type="button"
-                    class="btn btn-primary btn-sm left-sidebar__wide-button"
-                    @onclick="() => GameState.BuySapling()"
-                    disabled="@(!GameState.CanBuySapling())">
-                @GameState.GetSaplingCost().Display() @EmojiBank.Resource(ResourceType.Coin)
-            </button>
-        </div>
-        <div class="exchange-snowman-content">
-            <div class="exchange-line-2">
-                🌱 @EmojiBank.Symbol(SymbolType.Arrow) 🌳
+            <div class="exchange-snowman-content">
+                <div class="exchange-line-2">
+                    @EmojiBank.Resource(ResourceType.Coin)@GameState.GetSaplingCost().Display() @EmojiBank.Symbol(SymbolType.Arrow) @EmojiBank.Resource(ResourceType.Sapling)
+                </div>
             </div>
-        </div>
-    </article>
+        </article>
+    }
 
-    @* Empty Block 4 *@
-    <article class="left-sidebar__card left-sidebar__card--exchange">
-        <div class="left-sidebar__card-header">
-            <div>
-                <span class="left-sidebar__icon">❓</span>
-                <span class="left-sidebar__count">0</span>
+    @* Temperature Block *@
+    @if (GameState.HasResearch(ResearchType.UnlockTemperatureExchange))
+    {
+        <article class="left-sidebar__card left-sidebar__card--exchange left-sidebar__card--compact">
+            <div class="left-sidebar__card-header">
+                <div>
+                    <span class="left-sidebar__icon">@EmojiBank.Symbol(SymbolType.Temperature)</span>
+                    <span class="left-sidebar__count">@GameState.MaxTemperatureCelsius</span>
+                </div>
+                <button type="button"
+                        class="btn btn-primary btn-sm left-sidebar__wide-button"
+                        @onclick="GameState.BuyTemperatureMax"
+                        disabled="@(!GameState.CanBuyTemperatureMax())">
+                    @GameState.GetTemperatureMaxCost().Display() @EmojiBank.Resource(ResourceType.Energy)
+                </button>
             </div>
-            <button type="button" class="btn btn-primary btn-sm left-sidebar__wide-button" disabled>
-                ---
-            </button>
-        </div>
-        <div class="exchange-snowman-content">
-            <div class="exchange-line-2">
-                ---
+            <div class="exchange-snowman-content">
+                <div class="exchange-line-2">
+                    @EmojiBank.Resource(ResourceType.Energy)@GameState.GetTemperatureMaxCost().Display() @EmojiBank.Symbol(SymbolType.Arrow) ➕1 @EmojiBank.Symbol(SymbolType.Temperature)
+                </div>
             </div>
-        </div>
-    </article>
+        </article>
+    }
 
-    @* Empty Block 5 *@
-    <article class="left-sidebar__card left-sidebar__card--exchange">
-        <div class="left-sidebar__card-header">
-            <div>
-                <span class="left-sidebar__icon">❓</span>
-                <span class="left-sidebar__count">0</span>
+    @* Star Improver Block *@
+    @if (GameState.HasResearch(ResearchType.UnlockStarImprover))
+    {
+        <article class="left-sidebar__card left-sidebar__card--exchange left-sidebar__card--compact">
+            <div class="left-sidebar__card-header">
+                <div>
+                    <span class="left-sidebar__icon">🪄</span>
+                    <span class="left-sidebar__count">@GameState.EvaluatePassiveStat(PassiveStatType.Stars).Display()</span>
+                </div>
+                <button type="button"
+                        class="btn btn-primary btn-sm left-sidebar__wide-button"
+                        @onclick="GameState.UpgradeStars"
+                        disabled="@(!GameState.CanUpgradeStars())">
+                    @GameState.GetStarUpgradeCost().Display()@EmojiBank.Resource(ResourceType.StarDust)+@GameState.GetStarUpgradeCost().Display()@EmojiBank.Resource(ResourceType.Wood)
+                </button>
             </div>
-            <button type="button" class="btn btn-primary btn-sm left-sidebar__wide-button" disabled>
-                ---
-            </button>
-        </div>
-        <div class="exchange-snowman-content">
-            <div class="exchange-line-2">
-                ---
+            <div class="exchange-snowman-content">
+                <div class="exchange-line-2">
+                    @EmojiBank.Resource(ResourceType.StarDust)@GameState.GetStarUpgradeCost().Display()+@EmojiBank.Resource(ResourceType.Wood)@GameState.GetStarUpgradeCost().Display()@EmojiBank.Symbol(SymbolType.Arrow)➕1🪄
+                </div>
             </div>
-        </div>
-    </article>
+        </article>
+    }
 </section>
 
 @code {

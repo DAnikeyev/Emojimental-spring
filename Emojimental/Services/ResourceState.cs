@@ -16,6 +16,8 @@ public sealed class ResourceState
     public Stat ResearchPoint { get; } = new();
     public Stat Wood { get; } = new();
     public Stat StarDust { get; } = new();
+    public Stat Flower { get; } = new();
+    public Stat Carrot { get; } = new();
 
     public int SnowmanCount { get; set; }
     public int SaplingCount { get; set; }
@@ -37,6 +39,8 @@ public sealed class ResourceState
         ResourceType.ResearchPoint => ResearchPoint,
         ResourceType.Wood => Wood,
         ResourceType.StarDust => StarDust,
+        ResourceType.Flower => Flower,
+        ResourceType.Carrot => Carrot,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
     };
 

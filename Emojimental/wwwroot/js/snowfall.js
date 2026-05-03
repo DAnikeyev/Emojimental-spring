@@ -194,6 +194,23 @@
         }
     },
 
+    addResourceParticles(xPercent, yPercent, emoji, count, life) {
+        if (!this.canvas) return;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 10 + Math.random() * 20;
+            this.starParticles.push({
+                x: xPercent,
+                y: yPercent,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: life,
+                size: 0.8 + Math.random() * 0.4,
+                emoji: emoji
+            });
+        }
+    },
+
     draw() {
         if (!this.ctx || !this.canvas) return;
 

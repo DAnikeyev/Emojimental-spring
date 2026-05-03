@@ -1,46 +1,135 @@
 ﻿.temperature-sidebar {
+    --temperature-progress: 0;
+    --temperature-coldness: 1;
+    --sidebar-top: #f9fcff;
+    --sidebar-bottom: #e5eefc;
+    --sidebar-accent: #6b8bcc;
+    --sidebar-accent-strong: #496ab5;
+    --sidebar-accent-soft: rgba(194, 218, 255, 0.92);
+    --sidebar-surface: rgba(255, 255, 255, 0.82);
+    --sidebar-surface-strong: rgba(255, 255, 255, 0.94);
+    --sidebar-border: #d8e2f3;
+    --sidebar-text: #1f2a44;
+    --sidebar-label: #5b6880;
+    --sidebar-thumb: #6d7385;
+    --sidebar-shadow: rgba(46, 74, 122, 0.16);
+    --sidebar-chip-shadow: rgba(52, 78, 118, 0.14);
+    --sidebar-glow: rgba(126, 166, 235, 0.3);
+    --clock-night: #1d2b5d;
+    --clock-dawn: #f8a66c;
+    --clock-day: #87ceeb;
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
-    padding: 0.75rem 0.6rem;
-    border-radius: 1rem;
-    background: linear-gradient(180deg, #ffffff, #eef4ff);
-    border: 1px solid #d8e2f3;
-    box-shadow: 0 14px 30px rgba(39, 72, 121, 0.12);
+    gap: 0.85rem;
+    padding: 0.9rem 0.75rem;
+    border-radius: 2.5rem;
+    background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 48%),
+        radial-gradient(circle at 78% 88%, var(--sidebar-glow) 0%, rgba(255, 255, 255, 0) 52%),
+        linear-gradient(180deg, var(--sidebar-top), var(--sidebar-bottom));
+    border: 1px solid var(--sidebar-border);
+    box-shadow: 0 24px 60px var(--sidebar-shadow), inset 0 2px 4px rgba(255, 255, 255, 0.85);
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.temperature-sidebar::before,
+.temperature-sidebar::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.temperature-sidebar::before {
+    top: -2.7rem;
+    right: -2.4rem;
+    width: 7.25rem;
+    height: 7.25rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 70%);
+    opacity: calc(0.2 + (var(--temperature-coldness) * 0.45));
+}
+
+.temperature-sidebar::after {
+    left: -2.8rem;
+    bottom: -2.8rem;
+    width: 9.5rem;
+    height: 9.5rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sidebar-glow) 0%, rgba(255, 255, 255, 0) 68%);
+    opacity: calc(0.1 + (var(--temperature-progress) * 0.75));
+    filter: blur(6px);
+}
+
+.temperature-sidebar > * {
+    position: relative;
+    z-index: 1;
+    width: 100%;
 }
 
 .temperature-sidebar__top {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    flex: 2;
+    gap: 0.75rem;
+    flex: 1;
     min-height: 0;
     width: 100%;
+}
+
+.temperature-sidebar__goal {
+    position: absolute;
+    top: calc(0.55rem + 0.45rem); /* gutter padding + shell padding */
+    left: calc(0.5rem + 0.15rem + 0.1rem + (min(32%, 1.8rem) / 2)); /* shell + track + gutter + half rail */
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.temperature-sidebar__goal-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+    animation: goal-bounce 2s ease-in-out infinite;
+}
+
+@keyframes goal-bounce {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.15); opacity: 1; }
 }
 
 .temperature-sidebar__bottom {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
-    flex: 1;
-    min-height: 0;
+    gap: 0.55rem;
+    flex: 0 0 auto;
     width: 100%;
-    justify-content: flex-end;
 }
 
 .temperature-sidebar__slider-shell {
+    position: relative;
     display: flex;
     align-items: stretch;
     justify-content: center;
     width: 100%;
     flex: 1;
     min-height: 0;
+    padding: 0.45rem 0.5rem;
+    border-radius: 2rem;
+    background: linear-gradient(180deg, var(--sidebar-surface-strong), var(--sidebar-surface));
+    border: 1px solid var(--sidebar-border);
+    box-shadow: 0 14px 26px var(--sidebar-chip-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
 }
 
 .temperature-sidebar__vslider {
@@ -55,7 +144,7 @@
     width: 100%;
     flex: 1;
     min-height: 0;
-    padding: 0.3rem 0 0.3rem 0.2rem;
+    padding: 0.55rem 0.2rem 0.55rem 0.15rem;
     box-sizing: border-box;
 }
 
@@ -66,43 +155,46 @@
     min-height: 0;
     cursor: pointer;
     touch-action: none;
-    border-radius: 0.65rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .temperature-sidebar__vslider-gutter:focus {
     outline: none;
-    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(255, 179, 71, 0.75);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 4px var(--sidebar-accent-soft);
 }
 
 .temperature-sidebar__vslider-gutter:focus:not(:focus-visible) {
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .temperature-sidebar__vslider-gutter:focus-visible {
-    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(255, 179, 71, 0.75);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 4px var(--sidebar-accent-soft);
 }
 
 .temperature-sidebar__vslider-rail {
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: min(38%, 2.2rem);
+    top: 0.1rem;
+    bottom: 0.1rem;
+    left: 0.1rem;
+    width: min(32%, 1.8rem);
     border-radius: 999px;
-    background: linear-gradient(180deg, #ffcf7a, #ffb347);
-    box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.45);
+    box-shadow: inset 0 3px 7px rgba(255, 255, 255, 0.42), 0 10px 20px var(--sidebar-chip-shadow);
+    transition: background 220ms ease, box-shadow 220ms ease;
 }
 
 .temperature-sidebar__vslider-thumb {
     position: absolute;
     top: 0;
-    left: calc(min(38%, 2.2rem) / 2);
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 50%;
-    border: 3px solid #ffffff;
-    background: #6d7385;
-    box-shadow: 0 3px 10px rgba(31, 42, 68, 0.35);
+    left: calc((min(32%, 1.8rem) / 2) + 0.1rem);
+    width: 2.8rem;
+    height: 0.8rem;
+    border-radius: 3px;
+    border: 3px solid rgba(255, 255, 255, 0.94);
+    background:
+        linear-gradient(180deg, var(--sidebar-accent-soft), var(--sidebar-thumb));
+    box-shadow: 0 4px 8px var(--sidebar-chip-shadow), 0 0 0 1px rgba(255, 255, 255, 0.35);
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
@@ -110,35 +202,64 @@
 .temperature-sidebar__vslider-mark {
     position: absolute;
     right: 0;
-    left: calc(min(38%, 2.2rem) + 0.3rem);
+    left: calc(min(32%, 1.8rem) + 0.45rem);
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.35rem;
+    gap: 0.3rem;
     transform: translateY(-50%);
     pointer-events: none;
 }
 
 .temperature-sidebar__vslider-tick {
-    flex: 0 0 0.85rem;
+    flex: 0 0 0.95rem;
     height: 2px;
     border-radius: 999px;
-    background: #8c99b8;
+    background: linear-gradient(90deg, var(--sidebar-accent-soft), var(--sidebar-accent));
+    opacity: 0.85;
 }
 
 .temperature-sidebar__vslider-label {
-    flex: 0 0 1.6rem;
+    flex: 0 0 1.8rem;
     text-align: right;
     font-size: 0.78rem;
-    font-weight: 700;
-    color: #5b6880;
+    font-weight: 800;
+    color: var(--sidebar-label);
     font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .temperature-sidebar__current {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #1f2a44;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--sidebar-text);
+    white-space: nowrap;
+}
+
+.temperature-sidebar__temp-info {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.2rem;
+    align-items: center;
+}
+
+.temperature-sidebar__separator {
+    width: 80%;
+    height: 2px;
+    background: var(--sidebar-border);
+    border-radius: 999px;
+    margin: 0.2rem 0;
+    opacity: 0.6;
 }
 
 .temperature-sidebar__bonuses {
@@ -151,19 +272,29 @@
 .temperature-sidebar__bonus {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.15rem;
+    align-items: stretch;
+    gap: 0.2rem;
     width: 100%;
-    padding: 0.45rem 0.6rem;
-    border-radius: 0.65rem;
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid #d8e2f3;
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: #1f2a44;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    font-weight: 800;
+    font-size: 0.78rem;
+    color: var(--sidebar-text);
 }
 
 .temperature-sidebar__bonus span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    background: var(--sidebar-surface, rgba(255, 255, 255, 0.4));
+    border: 1px solid var(--sidebar-border);
+    box-shadow: 0 1px 2px var(--sidebar-chip-shadow);
     white-space: nowrap;
 }
 
@@ -172,6 +303,12 @@
     aspect-ratio: 1 / 1;
     position: relative;
     flex-shrink: 0;
+    padding: 0.45rem;
+    box-sizing: border-box;
+    border-radius: 2rem;
+    background: linear-gradient(180deg, var(--sidebar-surface-strong), var(--sidebar-surface));
+    border: 1px solid var(--sidebar-border);
+    box-shadow: 0 14px 28px var(--sidebar-chip-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .temperature-sidebar__clock-face {
@@ -180,17 +317,27 @@
     border-radius: 50%;
     background: conic-gradient(
         from 270deg,
-        #fdb44b 0deg,
-        #1a2a5e 60deg,
-        #1a2a5e 120deg,
-        #f9a66c 180deg,
-        #87ceeb 240deg,
-        #87ceeb 300deg,
-        #fdb44b 360deg
+        var(--clock-dawn) 0deg,
+        var(--clock-night) 64deg,
+        var(--clock-night) 132deg,
+        var(--clock-dawn) 188deg,
+        var(--clock-day) 240deg,
+        var(--clock-day) 308deg,
+        var(--clock-dawn) 360deg
     );
     position: relative;
     overflow: hidden;
-    border: 2px solid #d8e2f3;
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24), 0 10px 20px var(--sidebar-chip-shadow);
+}
+
+.temperature-sidebar__clock-face::after {
+    content: "";
+    position: absolute;
+    inset: 10%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 72%);
+    opacity: calc(0.35 + (var(--temperature-progress) * 0.2));
 }
 
 .temperature-sidebar__clock-sun,
@@ -198,10 +345,11 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     line-height: 1;
     pointer-events: none;
     z-index: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .temperature-sidebar__clock-sun {
@@ -216,47 +364,59 @@
     position: absolute;
     bottom: 50%;
     left: 50%;
-    width: 3px;
+    width: 4px;
     height: 45%;
-    background: #ffffff;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--sidebar-accent-strong));
     transform-origin: bottom center;
-    border-radius: 2px;
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
-    outline: 1px solid #000000;
-    outline-offset: -0.5px;
+    border-radius: 999px;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.25), 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
 .temperature-sidebar__clock-center {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 0.55rem;
-    height: 0.55rem;
+    width: 0.7rem;
+    height: 0.7rem;
     border-radius: 50%;
-    background: #ffb347;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), var(--sidebar-accent));
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 6px rgba(255, 179, 71, 0.7);
+    box-shadow: 0 0 10px var(--sidebar-glow);
 }
 
-.temperature-sidebar__daynight-bonus {
-    display: flex;
+.temperature-sidebar__daynight-bonus,
+.temperature-sidebar__date {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    font-weight: 700;
-    font-size: 0.75rem;
-    color: #1f2a44;
+    max-width: 100%;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.66));
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    box-shadow: 0 8px 16px var(--sidebar-chip-shadow);
+}
+
+.temperature-sidebar__daynight-bonus {
+    font-weight: 800;
+    font-size: 0.76rem;
+    color: var(--sidebar-text);
 }
 
 .temperature-sidebar__date {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #5b6880;
+    font-size: 0.73rem;
+    font-weight: 800;
+    color: var(--sidebar-label);
     text-align: center;
 }
 
 @media (max-width: 1100px) {
+    .temperature-sidebar {
+        gap: 0.7rem;
+    }
+
     .temperature-sidebar__slider-shell {
-        min-height: 22rem;
+        min-height: 24rem;
     }
 }

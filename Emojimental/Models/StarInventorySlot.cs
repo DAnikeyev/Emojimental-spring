@@ -2,27 +2,29 @@
 
 public sealed class StarInventorySlot
 {
-    public StarInventorySlot(int index, bool hasStar)
+    public StarInventorySlot(int index, Star? star)
     {
         Index = index;
-        HasStar = hasStar;
+        Star = star;
     }
 
     public int Index { get; }
 
-    public bool HasStar { get; set; }
+    public Star? Star { get; set; }
+
+    public bool HasStar => Star != null;
 
     public bool ConsumeStar()
     {
-        if (!HasStar)
+        if (Star == null)
             return false;
 
-        HasStar = false;
+        Star = null;
         return true;
     }
 
-    public void AddStar()
+    public void AddStar(Star star)
     {
-        HasStar = true;
+        Star = star;
     }
 }

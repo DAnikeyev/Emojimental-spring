@@ -3,55 +3,71 @@
 @inject IJSRuntime JS
 
 @using Emojimental.Models
-<aside class="temperature-sidebar">
+<aside class="temperature-sidebar" style="@TemperatureThemeStyle()">
     <div class="temperature-sidebar__top">
-        <div class="temperature-sidebar__slider-shell">
-            <div class="temperature-sidebar__vslider">
-                <div class="temperature-sidebar__vslider-track">
-                    <div class="temperature-sidebar__vslider-gutter"
-                         @ref="_trackRef"
-                         role="slider"
-                         tabindex="0"
-                         aria-valuemin="-10"
-                         aria-valuemax="20"
-                         aria-valuenow="@GameState.TemperatureCelsius"
-                         aria-valuetext="@($"{GameState.TemperatureCelsius}°C")"
-                         aria-label="Temperature in degrees Celsius"
-                         @onpointerdown="OnPointerDown"
-                         @onpointerdown:preventDefault="true"
-                         @onpointermove="OnPointerMove"
-                         @onpointerup="OnPointerUp"
-                         @onpointercancel="OnPointerUp"
-                         @onkeydown="OnKeyDown">
-                        <div class="temperature-sidebar__vslider-rail" aria-hidden="true"></div>
-                        <div class="temperature-sidebar__vslider-thumb"
-                             style="top:@ThumbOffsetPercent()"
-                             aria-hidden="true"></div>
+        @if (GameState.CanAdjustTemperature())
+        {
+            <div class="temperature-sidebar__slider-shell">
+                @if (GameState.HasResearch(ResearchType.UnlockGoal))
+                {
+                    <div class="temperature-sidebar__goal" aria-label="Final goal">
+                        <span class="temperature-sidebar__goal-icon">@EmojiBank.Symbol(SymbolType.Goal)</span>
+                    </div>
+                }
+                <div class="temperature-sidebar__vslider">
+                    <div class="temperature-sidebar__vslider-track">
+                        <div class="temperature-sidebar__vslider-gutter"
+                             @ref="_trackRef"
+                             role="slider"
+                             tabindex="0"
+                             aria-valuemin="-10"
+                             aria-valuemax="20"
+                             aria-valuenow="@GameState.TemperatureCelsius"
+                             aria-valuetext="@(GameState.TemperatureCelsius + "°C")"
+                             aria-label="Temperature in degrees Celsius"
+                             @onpointerdown="OnPointerDown"
+                             @onpointerdown:preventDefault="true"
+                             @onpointermove="OnPointerMove"
+                             @onpointerup="OnPointerUp"
+                             @onpointercancel="OnPointerUp"
+                             @onkeydown="OnKeyDown">
+                            <div class="temperature-sidebar__vslider-rail"
+                                 style="@RailGradientStyle()"
+                                 aria-hidden="true"></div>
+                            <div class="temperature-sidebar__vslider-thumb"
+                                 style="top:@ThumbOffsetPercent()"
+                                 aria-hidden="true"></div>
 
-                        @foreach (var mark in TemperatureMarks)
-                        {
-                            <div class="temperature-sidebar__vslider-mark" style="top:@MarkOffsetPercent(mark)">
-                                <span class="temperature-sidebar__vslider-tick" aria-hidden="true"></span>
-                                <span class="temperature-sidebar__vslider-label">@mark</span>
-                            </div>
-                        }
+                            @foreach (var mark in VisibleTemperatureMarks())
+                            {
+                                <div class="temperature-sidebar__vslider-mark" style="top:@MarkOffsetPercent(mark)">
+                                    <span class="temperature-sidebar__vslider-tick" aria-hidden="true"></span>
+                                    <span class="temperature-sidebar__vslider-label">@mark</span>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="temperature-sidebar__current">@EmojiBank.Symbol(SymbolType.Temperature) @GameState.TemperatureCelsius°</div>
-
-        <div class="temperature-sidebar__bonuses">
-            <div class="temperature-sidebar__bonus">
-                <span>@EmojiBank.Resource(ResourceType.Ice) @FormatBonus(GameState.GetSnowTemperatureBonusPercent())</span>
-                <span>@EmojiBank.Resource(ResourceType.Water) @FormatBonus(GameState.GetWaterTemperatureBonusPercent())</span>
-                <span>@EmojiBank.Resource(ResourceType.Energy) @FormatBonus(GameState.GetEnergyTemperatureBonusPercent())</span>
-            </div>
-        </div>
+        }
     </div>
 
     <div class="temperature-sidebar__bottom">
+        @if (GameState.CanAdjustTemperature())
+        {
+            <div class="temperature-sidebar__temp-info">
+                <div class="temperature-sidebar__current">@EmojiBank.Symbol(SymbolType.Temperature) @GameState.TemperatureCelsius°</div>
+
+                <div class="temperature-sidebar__bonuses">
+                    <div class="temperature-sidebar__bonus">
+                        <span>@EmojiBank.Resource(ResourceType.Ice) @FormatBonus(GameState.GetSnowTemperatureBonusPercent())</span>
+                        <span>@EmojiBank.Resource(ResourceType.Water) @FormatBonus(GameState.GetWaterTemperatureBonusPercent())</span>
+                        <span>@EmojiBank.Resource(ResourceType.Energy) @FormatBonus(GameState.GetEnergyTemperatureBonusPercent())</span>
+                    </div>
+                </div>
+            </div>
+            <div class="temperature-sidebar__separator"></div>
+        }
         <div class="temperature-sidebar__clock" aria-label="Day-night cycle">
             <div class="temperature-sidebar__clock-face">
                 <span class="temperature-sidebar__clock-sun" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Sun)</span>
@@ -72,14 +88,14 @@
 
 @code {
     private static readonly int[] TemperatureMarks = [-10, -5, 0, 5, 10, 15, 20];
+    private const int SliderMin = -10;
+    private const int SliderMax = 20;
     private static readonly DateTime GameStartDate = new(2026, 4, 1);
     private static readonly DateTime GameEndDate = new(2026, 5, 31);
 
     private ElementReference _trackRef;
     private TrackBounds? _dragBounds;
     private bool _pointerActive;
-
-    private DateTime _lastUpdate = DateTime.MinValue;
 
     protected override void OnInitialized()
     {
@@ -94,12 +110,7 @@
 
     private void OnRequestUiUpdate()
     {
-        var now = DateTime.UtcNow;
-        if ((now - _lastUpdate).TotalMilliseconds >= 500)
-        {
-            _lastUpdate = now;
-            InvokeAsync(StateHasChanged);
-        }
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task OnPointerDown(PointerEventArgs e)
@@ -132,7 +143,8 @@
         if (_dragBounds is not { Height: > 0 } bounds) return;
 
         var ratio = (clientY - bounds.Top) / bounds.Height;
-        var raw = 20d - ratio * 30d;
+        var range = SliderMax - SliderMin;
+        var raw = SliderMax - ratio * range;
         var v = (int)Math.Round(raw, MidpointRounding.AwayFromZero);
         GameState.SetTemperature(v);
     }
@@ -154,10 +166,10 @@
                 GameState.SetTemperature(-10);
                 break;
             case "End":
-                GameState.SetTemperature(20);
+                GameState.SetTemperature(GameState.MaxTemperatureCelsius);
                 break;
             case "PageUp":
-                GameState.SetTemperature(Math.Min(20, current + 5));
+                GameState.SetTemperature(Math.Min(GameState.MaxTemperatureCelsius, current + 5));
                 break;
             case "PageDown":
                 GameState.SetTemperature(Math.Max(-10, current - 5));
@@ -169,8 +181,44 @@
 
     private string ThumbOffsetPercent() => MarkOffsetPercent(GameState.TemperatureCelsius);
 
-    private static string MarkOffsetPercent(int mark)
-        => FormattableString.Invariant($"{((20d - mark) / 30d) * 100d:F2}%");
+
+    private string TemperatureThemeStyle()
+    {
+        var progress = GameState.TemperatureProgress;
+        var inv = FormattableString.Invariant;
+
+        return string.Join(";", new[]
+        {
+            inv($"--temperature-progress:{progress:F3}"),
+            inv($"--temperature-coldness:{1d - progress:F3}"),
+            $"--sidebar-top:{GameState.MixColor(249, 252, 255, 255, 247, 239, progress)}",
+            $"--sidebar-bottom:{GameState.MixColor(229, 238, 252, 255, 225, 196, progress)}",
+            $"--sidebar-accent:{GameState.MixColor(107, 139, 204, 255, 152, 94, progress)}",
+            $"--sidebar-accent-strong:{GameState.MixColor(73, 106, 181, 228, 113, 73, progress)}",
+            $"--sidebar-accent-soft:{GameState.MixColor(194, 218, 255, 255, 221, 186, progress, 0.92d)}",
+            $"--sidebar-surface:{GameState.MixColor(255, 255, 255, 255, 249, 242, progress, 0.82d)}",
+            $"--sidebar-surface-strong:{GameState.MixColor(255, 255, 255, 255, 244, 233, progress, 0.94d)}",
+            $"--sidebar-border:{GameState.MixColor(216, 226, 243, 246, 205, 169, progress)}",
+            $"--sidebar-text:{GameState.MixColor(31, 42, 68, 104, 57, 37, progress)}",
+            $"--sidebar-label:{GameState.MixColor(91, 104, 128, 124, 82, 57, progress)}",
+            $"--sidebar-thumb:{GameState.MixColor(109, 115, 133, 255, 141, 93, progress)}",
+            $"--sidebar-shadow:{GameState.MixColor(46, 74, 122, 158, 83, 35, progress, 0.16d)}",
+            $"--sidebar-chip-shadow:{GameState.MixColor(52, 78, 118, 160, 90, 43, progress, 0.14d)}",
+            $"--sidebar-glow:{GameState.MixColor(126, 166, 235, 255, 176, 104, progress, 0.30d)}",
+            $"--clock-night:{GameState.MixColor(29, 43, 93, 77, 81, 128, progress)}",
+            $"--clock-dawn:{GameState.MixColor(248, 166, 108, 255, 171, 118, progress)}",
+            $"--clock-day:{GameState.MixColor(135, 206, 235, 187, 229, 163, progress)}"
+        }) + ";";
+    }
+
+    private string MarkOffsetPercent(int mark)
+    {
+        var range = SliderMax - SliderMin;
+        return FormattableString.Invariant($"{((SliderMax - mark) / (double)range) * 100d:F2}%");
+    }
+
+    private IEnumerable<int> VisibleTemperatureMarks()
+        => TemperatureMarks;
 
     private static string FormatBonus(int percent)
         => $"{(percent >= 0 ? "+" : string.Empty)}{percent}%";
@@ -196,12 +244,12 @@
 
     private string CurrentDateDisplay()
     {
-        var daysElapsed = (int)(GameState.PlayTime.TotalMinutes);
+        var daysElapsed = GameState.DaysElapsed;
         var date = GameStartDate.AddDays(daysElapsed);
         if (date > GameEndDate)
             date = GameEndDate;
 
-        return $"{date:MMM dd}";
+        return $"{EmojiBank.Symbol(SymbolType.Calendar)} {date:dd--MM--yy}";
     }
 
     public void Dispose()
@@ -209,6 +257,23 @@
         GameState.Changed -= OnGameStateChanged;
         GameState.RequestUiUpdate -= OnRequestUiUpdate;
     }
+
+    private string RailGradientStyle()
+    {
+        var range = SliderMax - SliderMin;
+        var maxTemp = GameState.MaxTemperatureCelsius;
+        // Position of max temp from top (0% = top = 20°C, 100% = bottom = -10°C)
+        var maxTempPercent = ((SliderMax - maxTemp) / (double)range) * 100d;
+        var progress = GameState.TemperatureProgress;
+        var inv = FormattableString.Invariant;
+        var locked = GameState.MixColor(188, 196, 212, 216, 198, 180, progress);
+        var hot = GameState.MixColor(255, 92, 92, 255, 120, 104, progress);
+        var mild = GameState.MixColor(255, 172, 101, 255, 204, 120, progress);
+        var cool = GameState.MixColor(94, 181, 255, 117, 207, 186, progress);
+        // Frosty blue shifts toward spring greens and warm amber while keeping the locked range muted above max temp.
+        return inv($"background: linear-gradient(180deg, {locked} 0%, {locked} {maxTempPercent:F2}%, {hot} {maxTempPercent:F2}%, {mild} 48%, {cool} 100%)");
+    }
+
 
     private sealed class TrackBounds
     {

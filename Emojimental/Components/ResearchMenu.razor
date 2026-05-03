@@ -2,18 +2,12 @@
 @implements IDisposable
 @inject Services.GameState GameState
 
-<section class="left-sidebar__section">
-    <div class="left-sidebar__section-header" aria-label="Research">
-        <span class="left-sidebar__section-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Research)</span>
-    </div>
-
-    @foreach (var research in GameState.Researches)
+<section class="left-sidebar__section left-sidebar__section--research">
+    @foreach (var research in GameState.Researches.Where(r => !GameState.HasResearch(r.Type)).Take(3))
     {
-        var owned = GameState.HasResearch(research.Type);
-
-        <article class="left-sidebar__card left-sidebar__card--research left-sidebar__card--research-@research.CardModifier @(owned ? "left-sidebar__card--done" : "")">
+        <article class="left-sidebar__card left-sidebar__card--research left-sidebar__card--research-@research.CardModifier">
             <div class="left-sidebar__research-status" aria-hidden="true">
-                @(owned ? "1/1" : "0/1")
+                0/1
             </div>
 
             <div class="left-sidebar__research-effect">@research.EffectDisplay</div>
@@ -24,7 +18,6 @@
                         @onclick="() => GameState.BuyResearch(research.Type)"
                         disabled="@(!GameState.CanBuyResearch(research.Type))"
                         aria-label="Buy research @research.Type">
-                    <span class="left-sidebar__research-button-icon" aria-hidden="true">@EmojiBank.Symbol(SymbolType.Research)</span>
                     <span class="left-sidebar__research-price">@research.Price.Display()@EmojiBank.Resource(research.PriceResource)</span>
                 </button>
             </div>

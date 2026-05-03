@@ -5,4 +5,7 @@ public sealed record BeamStarSlot(
     FieldNodeSide SourceSide,
     int? TargetFieldNodeId = null,
     FieldNodeSide? TargetSide = null,
-    bool HasStar = false);
+    Star? Star = null)
+{
+    public bool HasStar => Star != null;
+}

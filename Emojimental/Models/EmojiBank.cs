@@ -11,7 +11,9 @@ public enum ResourceType
     Happiness,
     ResearchPoint,
     Wood,
-    StarDust
+    StarDust,
+    Flower,
+    Carrot
 }
 
 public enum SymbolType
@@ -19,7 +21,9 @@ public enum SymbolType
     Multiply,
     Plus,
     Arrow,
-    PerSecond,
+    Thousand,
+    Million,
+    Second,
     Done,
     Locked,
     Nothing,
@@ -37,7 +41,12 @@ public enum SymbolType
     Temperature,
     Sun,
     Moon,
-    ResearchPoint
+    FastProgress,
+    StarModifier,
+    ResearchPoint,
+    Music,
+    Calendar,
+    Goal
 }
 
 public static class EmojiBank
@@ -52,9 +61,11 @@ public static class EmojiBank
             ResourceType.Sapling => "🌱",
             ResourceType.Tree => "🌲",
             ResourceType.Happiness => "😊",
-            ResourceType.ResearchPoint => "🧪",
+            ResourceType.ResearchPoint => "🔬",
             ResourceType.Wood => "🪵",
             ResourceType.StarDust => "✨",
+            ResourceType.Flower => "🌸",
+            ResourceType.Carrot => "🥕",
             _ => "❓"
         };
 
@@ -64,7 +75,9 @@ public static class EmojiBank
             SymbolType.Multiply => "✖️",
             SymbolType.Plus => "➕",
             SymbolType.Arrow => "➡️",
-            SymbolType.PerSecond => "⏱️",
+            SymbolType.Thousand => "🧮",
+            SymbolType.Million => "🌌",
+            SymbolType.Second => "⏱️",
             SymbolType.Done => "✅",
             SymbolType.Locked => "🔒",
             SymbolType.Nothing => "∅",
@@ -82,7 +95,12 @@ public static class EmojiBank
             SymbolType.Temperature => "🌡️",
             SymbolType.Sun => "☀️",
             SymbolType.Moon => "🌙",
+            SymbolType.FastProgress => "🚀🕛",
+            SymbolType.StarModifier => "✳️",
             SymbolType.ResearchPoint => "🧪",
+            SymbolType.Music => "🎵",
+            SymbolType.Calendar => "📅",
+            SymbolType.Goal => "🎯",
             _ => "✨"
         };
 }

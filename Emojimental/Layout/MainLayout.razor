@@ -1,46 +1,153 @@
 ﻿@using Emojimental.Components
 @inherits LayoutComponentBase
 @implements IDisposable
+@implements IAsyncDisposable
 @inject GameState GameState
+@inject IJSRuntime JS
 
-<div class="page">
-    <header class="top-row">
-        <div class="top-row__brand" aria-label="Emojimental">✨</div>
+<div class="page-viewport" @ref="_viewport">
+    <div class="page-stage" @attributes="StageAttributes">
+        <div class="page">
+            <header class="top-row">
+                <div class="top-row__brand" aria-label="Emojimental">✨</div>
 
-        <div class="top-row__resources">
-            <ResourceBar />
+                <div class="top-row__resources">
+                    <ResourceBar />
+                </div>
+            </header>
+
+            <main>
+                <article class="content">
+                    @Body
+                </article>
+            </main>
+
+            <Snowfall />
+
+            @if (GameState.IsVictory)
+            {
+                <VictoryOverlay />
+            }
         </div>
-    </header>
-
-    <main>
-        <article class="content">
-            @Body
-        </article>
-    </main>
-
-    <Snowfall />
+    </div>
+    <GlobalHoverPopup />
 </div>
 
 @code {
+    private const double VirtualWidth = 1920;
+    private const double VirtualHeight = 937;
+
+    private ElementReference _viewport;
+    private DotNetObjectReference<MainLayout>? _selfReference;
+    private bool _isObservingViewport;
+
+    private double _viewportWidth = VirtualWidth;
+    private double _viewportHeight = VirtualHeight;
+
+    private string _tempStyles = string.Empty;
+
+    private string TemperatureStyles()
+    {
+        var progress = GameState.TemperatureProgress;
+        var inv = FormattableString.Invariant;
+
+        return string.Join(";", new[]
+        {
+            inv($"--temperature-progress:{progress:F3}"),
+            inv($"--temperature-coldness:{1d - progress:F3}"),
+            $"--app-bg-top:{GameState.MixColor(247, 251, 255, 255, 247, 239, progress)}",
+            $"--app-bg-bottom:{GameState.MixColor(237, 243, 251, 255, 225, 196, progress)}",
+            $"--app-accent:{GameState.MixColor(107, 139, 204, 255, 152, 94, progress)}",
+            $"--app-accent-strong:{GameState.MixColor(73, 106, 181, 228, 113, 73, progress)}",
+            $"--app-accent-soft:{GameState.MixColor(194, 218, 255, 255, 221, 186, progress, 0.92d)}",
+            $"--app-surface:{GameState.MixColor(255, 255, 255, 255, 249, 242, progress, 0.82d)}",
+            $"--app-surface-strong:{GameState.MixColor(255, 255, 255, 255, 244, 233, progress, 0.94d)}",
+            $"--app-border:{GameState.MixColor(216, 226, 243, 246, 205, 169, progress)}",
+            $"--app-text:{GameState.MixColor(31, 42, 68, 104, 57, 37, progress)}",
+            $"--app-label:{GameState.MixColor(91, 104, 128, 124, 82, 57, progress)}",
+            $"--app-shadow:{GameState.MixColor(46, 74, 122, 158, 83, 35, progress, 0.16d)}",
+            $"--app-glow:{GameState.MixColor(126, 166, 235, 255, 176, 104, progress, 0.30d)}"
+        }) + ";";
+    }
+
+    private string StageStyle
+        => $"width:{VirtualWidth:F0}px;height:{VirtualHeight:F0}px;transform:translate(-50%, -50%) scale({Scale.ToString(System.Globalization.CultureInfo.InvariantCulture)});";
+
+    private IReadOnlyDictionary<string, object> StageAttributes
+        => new Dictionary<string, object>
+        {
+            ["style"] = StageStyle
+        };
+
+    private double Scale => Math.Min(_viewportWidth / VirtualWidth, _viewportHeight / VirtualHeight);
+
+    private async Task UpdateStyles()
+    {
+        var styles = TemperatureStyles();
+        if (_isObservingViewport)
+        {
+            await JS.InvokeVoidAsync("emojimentalViewport.setStyles", _viewport, styles);
+        }
+    }
+
     protected override void OnInitialized()
     {
         GameState.Changed += OnGameStateChanged;
         GameState.RequestUiUpdate += OnRequestUiUpdate;
+        _tempStyles = TemperatureStyles();
     }
 
-    private void OnGameStateChanged()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+            return;
+
+        _selfReference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("emojimentalViewport.observe", _viewport, _selfReference);
+        _isObservingViewport = true;
+        await UpdateStyles();
+    }
+
+    private async void OnGameStateChanged()
+    {
+        await UpdateStyles();
         StateHasChanged();
     }
 
-    private void OnRequestUiUpdate()
+    private async void OnRequestUiUpdate()
     {
-        InvokeAsync(StateHasChanged);
+        await UpdateStyles();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnViewportResized(double width, double height)
+    {
+        _viewportWidth = width;
+        _viewportHeight = height;
+        return InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
         GameState.Changed -= OnGameStateChanged;
         GameState.RequestUiUpdate -= OnRequestUiUpdate;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        _selfReference?.Dispose();
+
+        if (!_isObservingViewport)
+            return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("emojimentalViewport.dispose", _viewport);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
     }
 }

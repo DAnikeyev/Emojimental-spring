@@ -1,36 +1,84 @@
 ﻿.resource-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 4px;
+    gap: 12px;
+    padding: 6px;
     justify-content: flex-start;
 }
 
-.resource-group {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
 
 .cheat-button {
-    background: none;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    padding: 0 4px;
+    border: 1px solid var(--app-border, rgba(255, 255, 255, 0.2));
+    border-radius: 20px;
+    padding: 6px 12px;
     cursor: pointer;
-    font-size: 0.8rem;
-    color: white;
+    font-size: 1rem;
+    color: var(--app-text, white);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--app-surface, rgba(255,255,255,0.5));
 }
 
 .cheat-button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--app-accent, rgba(255, 255, 255, 0.3));
+    transform: translateY(-1px);
+}
+
+.timer-and-volume {
+    margin-left: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
 }
 
 .timer {
-    margin-left: auto;
-    font-family: monospace;
-    font-size: 0.85rem;
-    color: #1f2a44;
-    padding: 0 8px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--app-label, #1f2a44);
+    padding: 0 12px;
     white-space: nowrap;
+    background: var(--app-surface, rgba(255,255,255,0.5));
+    border-radius: 20px;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--app-surface, rgba(255,255,255,0.5));
+    border-radius: 20px;
+}
+
+.volume-control input[type=range] {
+    width: 60px;
+    height: 12px;
+}
+
+.weather-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 56px; /* Increased width to fit 2 symbols (🚫🌧️) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mute-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

@@ -1,0 +1,64 @@
+﻿@using Emojimental.Services
+@using Emojimental.Models
+@inject GameState GameState
+@inject NavigationManager NavigationManager
+
+<div class="victory-overlay">
+    <div class="victory-background">
+        @for (int i = 0; i < 50; i++)
+        {
+            var leftStr = Random.Shared.Next(0, 100).ToString() + "%";
+            var topStr = Random.Shared.Next(0, 100).ToString() + "%";
+            var delayStr = (Random.Shared.NextDouble() * 2).ToString("F2") + "s";
+            var emoji = Random.Shared.Next(0, 2) == 0 ? "🌿" : "🌲";
+            <div class="victory-emoji" style="left: @leftStr; top: @topStr; animation-delay: @delayStr">
+                @emoji
+            </div>
+        }
+    </div>
+    
+    <div class="fireworks">
+        @for (int i = 0; i < 10; i++)
+        {
+            var leftStr = Random.Shared.Next(10, 90).ToString() + "%";
+            var topStr = Random.Shared.Next(10, 60).ToString() + "%";
+            var delayStr = (Random.Shared.NextDouble() * 1.5).ToString("F2") + "s";
+            <div class="firework" style="left: @leftStr; top: @topStr; animation-delay: @delayStr"></div>
+        }
+    </div>
+
+    <div class="victory-card">
+        <div class="victory-title">@EmojiBank.Symbol(SymbolType.Done)</div>
+        <div class="victory-timer">@FormatPlayTime(GameState.PlayTime)</div>
+        <div class="victory-actions">
+            <button class="victory-button" @onclick="ContinuePlay">
+                ▶️
+            </button>
+            <button class="victory-button" @onclick="RestartGame">
+                🔄
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void ContinuePlay()
+    {
+        GameState.ContinueVictory();
+    }
+
+    private void RestartGame()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    private string FormatPlayTime(TimeSpan t)
+    {
+        var totalSeconds = t.TotalSeconds;
+        var hh = (int)totalSeconds / 3600;
+        var mm = (int)(totalSeconds / 60) % 60;
+        var ss = (int)totalSeconds % 60;
+        var ff = (int)((totalSeconds - Math.Truncate(totalSeconds)) * 100);
+        return $"{hh:D2}:{mm:D2}:{ss:D2}:{ff:D2}";
+    }
+}
