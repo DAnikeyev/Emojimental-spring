@@ -4,7 +4,14 @@
 
 @if (GameState.HoveredStar != null || GameState.HoveredPassiveStat != null)
 {
-    <dl class="global-hover-popup" style="left: @(GameState.HoveredInfoPosition.X)px; top: @(GameState.HoveredInfoPosition.Y)px;" aria-label="Hover info">
+    var sideClass = GameState.CurrentHoverSide switch
+    {
+        HoverSide.Left => "global-hover-popup--left",
+        HoverSide.Right => "global-hover-popup--right",
+        _ => "global-hover-popup--center"
+    };
+
+    <dl class="global-hover-popup @sideClass" style="left: @(GameState.HoveredInfoPosition.X)px; top: @(GameState.HoveredInfoPosition.Y)px;" aria-label="Hover info">
         @if (GameState.HoveredStar != null)
         {
             var star = GameState.HoveredStar;
@@ -31,12 +38,19 @@
         {
             var type = GameState.HoveredPassiveStat.Value;
             var starSlot = GameState.PassiveStatStarSlots.FirstOrDefault(s => s.Type == type);
+            var value = GameState.EvaluatePassiveStat(type);
             <div>
-                <dt>@type.Emoji() @EmojiBank.Symbol(SymbolType.Arrow) @type.TargetEmoji()</dt>
-                <dd>@GameState.EvaluatePassiveStat(type).Display()</dd>
+                <dt>@type.Emoji() @EmojiBank.Symbol(SymbolType.Upgrade) @type.TargetEmoji()</dt>
+                <dd>@value.Display()</dd>
                 @if (starSlot?.Star != null)
                 {
-                    <dd>(@starSlot.Star.ProductionMultiplier.Display())</dd>
+                    var star = starSlot.Star;
+                    var bonusText = star.ProductionMultiplier.Display();
+                    if (star.CooldownReduction > 0)
+                    {
+                        bonusText += $" / -{star.CooldownReduction:F2}s";
+                    }
+                    <dd>(@bonusText)</dd>
                 }
             </div>
         }

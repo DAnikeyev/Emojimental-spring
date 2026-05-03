@@ -20,7 +20,7 @@ public static class PassiveStatTypeExtensions
         {
             PassiveStatType.Happiness => EmojiBank.Resource(ResourceType.Happiness),
             PassiveStatType.Seeds => EmojiBank.Resource(ResourceType.Sapling),
-            PassiveStatType.Markets => "🏪",
+            PassiveStatType.Markets => "⚖️",
             PassiveStatType.Houses => "🏠",
             PassiveStatType.Stars => "🪄",
             PassiveStatType.RecycledStars => "♻️",

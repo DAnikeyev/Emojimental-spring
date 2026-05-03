@@ -53,7 +53,7 @@
             </div>
             <div class="exchange-snowman-content">
                 <div class="exchange-line-2">
-                    @EmojiBank.Resource(ResourceType.Coin)@GameState.GetSaplingCost().Display() @EmojiBank.Symbol(SymbolType.Arrow) @EmojiBank.Resource(ResourceType.Sapling)
+                    @EmojiBank.Resource(ResourceType.Coin)@GameState.GetSaplingCost().Display() @EmojiBank.Symbol(SymbolType.Upgrade) @EmojiBank.Resource(ResourceType.Sapling)
                 </div>
             </div>
         </article>
@@ -77,7 +77,7 @@
             </div>
             <div class="exchange-snowman-content">
                 <div class="exchange-line-2">
-                    @EmojiBank.Resource(ResourceType.Energy)@GameState.GetTemperatureMaxCost().Display() @EmojiBank.Symbol(SymbolType.Arrow) ➕1 @EmojiBank.Symbol(SymbolType.Temperature)
+                    @EmojiBank.Resource(ResourceType.Energy)@GameState.GetTemperatureMaxCost().Display() @EmojiBank.Symbol(SymbolType.Upgrade) ➕1 @EmojiBank.Symbol(SymbolType.Temperature)
                 </div>
             </div>
         </article>
@@ -93,7 +93,7 @@
                     <span class="left-sidebar__count">@GameState.EvaluatePassiveStat(PassiveStatType.Stars).Display()</span>
                 </div>
                 <button type="button"
-                        class="btn btn-primary btn-sm left-sidebar__wide-button"
+                        class="btn btn-primary btn-sm left-sidebar__wide-button left-sidebar__wide-button--compact"
                         @onclick="GameState.UpgradeStars"
                         disabled="@(!GameState.CanUpgradeStars())">
                     @GameState.GetStarUpgradeCost().Display()@EmojiBank.Resource(ResourceType.StarDust)+@GameState.GetStarUpgradeCost().Display()@EmojiBank.Resource(ResourceType.Wood)
@@ -101,7 +101,7 @@
             </div>
             <div class="exchange-snowman-content">
                 <div class="exchange-line-2">
-                    @EmojiBank.Resource(ResourceType.StarDust)@GameState.GetStarUpgradeCost().Display()+@EmojiBank.Resource(ResourceType.Wood)@GameState.GetStarUpgradeCost().Display()@EmojiBank.Symbol(SymbolType.Arrow)➕1🪄
+                    @EmojiBank.Resource(ResourceType.StarDust)@GameState.GetStarUpgradeCost().Display()+@EmojiBank.Resource(ResourceType.Wood)@GameState.GetStarUpgradeCost().Display()@EmojiBank.Symbol(SymbolType.Upgrade)➕1🪄
                 </div>
             </div>
         </article>

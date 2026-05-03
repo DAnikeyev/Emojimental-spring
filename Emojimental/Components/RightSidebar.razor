@@ -1,7 +1,7 @@
 ﻿@implements IDisposable
 @inject GameState GameState
 
-<aside class="right-sidebar">
+<aside class="right-sidebar" data-cycle-phase="@CyclePhase">
     <div class="right-sidebar__content">
         @if (GameState.SelectedFieldObject is not null)
         {
@@ -70,14 +70,17 @@
         @* Happiness block - dedicated, above other passives, no gem slot *@
         @if (GameState.IsPassiveStatUnlocked(PassiveStatType.Happiness))
         {
-            var happinessValue = GameState.EvaluateHappiness().ToDouble();
+            var happinessValue = GameState.EvaluatePassiveStat(PassiveStatType.Happiness).ToDouble();
             var logValue = Math.Log2(happinessValue + 1);
-            var happinessPercent = Math.Min(logValue, 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+            var cappedHappiness = Math.Min(logValue, 100);
+            var happinessPercent = cappedHappiness.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
 
             <div class="right-sidebar__passive-row right-sidebar__passive-row--happiness"
                  aria-label="@EmojiBank.Resource(ResourceType.Happiness) stat"
-                 title="@EmojiBank.Resource(ResourceType.Happiness)">
-                <span class="right-sidebar__passive-emoji">@EmojiBank.Resource(ResourceType.Happiness)</span>
+                 title="@EmojiBank.Resource(ResourceType.Happiness)"
+                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(PassiveStatType.Happiness, e.ClientX, e.ClientY, HoverSide.Right))"
+                 @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
+                <span class="right-sidebar__passive-emoji">@EmojiBank.Happiness(cappedHappiness)</span>
                 <div class="right-sidebar__happiness-container">
                     <div class="right-sidebar__happiness-bar">
                         @{
@@ -86,7 +89,7 @@
                         <div class="right-sidebar__happiness-fill" style="width: @width"></div>
                     </div>
                     <span class="right-sidebar__passive-value">
-                        @(logValue.ToString("F2")) / 100
+                        @happinessPercent
                     </span>
                 </div>
             </div>
@@ -112,7 +115,7 @@
             <div class="right-sidebar__passive-row"
                  aria-label="@carrotsType.Emoji() stat"
                  title="🥕"
-                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(carrotsType, e.ClientX, e.ClientY))"
+                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(carrotsType, e.ClientX, e.ClientY, HoverSide.Right))"
                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
                 <span class="right-sidebar__passive-emoji">@carrotsType.Emoji()</span>
                 <span class="right-sidebar__passive-value">@GameState.EvaluatePassiveStat(carrotsType).Display() <span class="right-sidebar__base-value">(@carrotsStat.BaseValue.Display())</span></span>
@@ -123,7 +126,12 @@
                          @ondrop="@(() => GameState.TryPlacePassiveStatStar(carrotsType))">
                         @if (carrotsHasStar)
                         {
-                            <span class="right-sidebar__passive-star-icon" draggable="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
+                            <span class="right-sidebar__passive-star-icon" 
+                                  draggable="true"
+                                  @onmouseenter="@(e => GameState.SetHoveredStar(carrotsStarSlot.Star, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseenter:stopPropagation="true"
+                                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(carrotsType, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseleave:stopPropagation="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
                         }
                         else
                         {
@@ -144,7 +152,7 @@
             <div class="right-sidebar__passive-row"
                  aria-label="@housesType.Emoji() stat"
                  title="🏠"
-                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(housesType, e.ClientX, e.ClientY))"
+                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(housesType, e.ClientX, e.ClientY, HoverSide.Right))"
                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
                 <span class="right-sidebar__passive-emoji">@housesType.Emoji()</span>
                 @if (housesUnlocked)
@@ -162,7 +170,12 @@
                          @ondrop="@(() => GameState.TryPlacePassiveStatStar(housesType))">
                         @if (housesHasStar)
                         {
-                            <span class="right-sidebar__passive-star-icon" draggable="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
+                            <span class="right-sidebar__passive-star-icon" 
+                                  draggable="true"
+                                  @onmouseenter="@(e => GameState.SetHoveredStar(housesStarSlot.Star, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseenter:stopPropagation="true"
+                                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(housesType, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseleave:stopPropagation="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
                         }
                         else
                         {
@@ -183,7 +196,7 @@
             <div class="right-sidebar__passive-row"
                  aria-label="@flowersType.Emoji() stat"
                  title="🌸"
-                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(flowersType, e.ClientX, e.ClientY))"
+                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(flowersType, e.ClientX, e.ClientY, HoverSide.Right))"
                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
                 <span class="right-sidebar__passive-emoji">@flowersType.Emoji()</span>
                 @if (flowersUnlocked)
@@ -201,7 +214,12 @@
                          @ondrop="@(() => GameState.TryPlacePassiveStatStar(flowersType))">
                         @if (flowersHasStar)
                         {
-                            <span class="right-sidebar__passive-star-icon" draggable="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
+                            <span class="right-sidebar__passive-star-icon" 
+                                  draggable="true"
+                                  @onmouseenter="@(e => GameState.SetHoveredStar(flowersStarSlot.Star, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseenter:stopPropagation="true"
+                                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(flowersType, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseleave:stopPropagation="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
                         }
                         else
                         {
@@ -226,7 +244,7 @@
             var description = type switch
             {
                 PassiveStatType.Seeds => "🌱",
-                PassiveStatType.Markets => "🏪",
+                PassiveStatType.Markets => "⚖️",
                 PassiveStatType.Houses => "🏠",
                 PassiveStatType.Stars => "🪄",
                 PassiveStatType.RecycledStars => "♻️",
@@ -237,7 +255,7 @@
             <div class="right-sidebar__passive-row" 
                  aria-label="@type.Emoji() stat" 
                  title="@description"
-                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(type, e.ClientX, e.ClientY))"
+                 @onmouseenter="@(e => GameState.SetHoveredPassiveStat(type, e.ClientX, e.ClientY, HoverSide.Right))"
                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
                 <span class="right-sidebar__passive-emoji">@type.Emoji()</span>
                 <span class="right-sidebar__passive-value">@GameState.EvaluatePassiveStat(type).Display() <span class="right-sidebar__base-value">(@stat.BaseValue.Display())</span></span>
@@ -248,7 +266,12 @@
                          @ondrop="@(() => GameState.TryPlacePassiveStatStar(type))">
                         @if (hasStar)
                         {
-                            <span class="right-sidebar__passive-star-icon" draggable="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
+                            <span class="right-sidebar__passive-star-icon" 
+                                  draggable="true"
+                                  @onmouseenter="@(e => GameState.SetHoveredStar(starSlot.Star, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseenter:stopPropagation="true"
+                                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(type, e.ClientX, e.ClientY, HoverSide.Right))"
+                                  @onmouseleave:stopPropagation="true">@EmojiBank.Symbol(SymbolType.Stars)</span>
                         }
                         else
                         {
@@ -263,6 +286,16 @@
 
 @code {
     private DateTime _lastUpdate = DateTime.MinValue;
+
+    private string CyclePhase
+    {
+        get
+        {
+            var p = GameState.DayCyclePosition;
+            if (p is >= 0.25 and <= 0.75) return "day";
+            return "night";
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -286,7 +319,14 @@
             ? EmojiBank.Symbol(SymbolType.Nothing)
             : $"({string.Join($" {EmojiBank.Symbol(SymbolType.Plus)} ", input.Select(c => $"{c.Amount.Display()} {EmojiBank.Resource(c.Type)}"))})";
 
-        return $"{inputDisplay} {EmojiBank.Symbol(SymbolType.Arrow)} {GameState.GetDisplayedFactoryValue(fieldObject).Display()} {fieldObject.ResourceIcon}";
+        var outputValue = GameState.GetDisplayedFactoryValue(fieldObject);
+        var evalDisplay = string.Empty;
+        if (fieldObject.Type == FieldNodeType.Recycler)
+        {
+            evalDisplay = $" {EmojiBank.Symbol(SymbolType.Multiply)} {GameState.EvaluatePassiveStat(PassiveStatType.RecycledStars).Display()}";
+        }
+
+        return $"{inputDisplay} {EmojiBank.Symbol(SymbolType.Arrow)} {outputValue.Display()}{evalDisplay} {fieldObject.ResourceIcon}";
     }
 
     private void OnGameStateChanged()

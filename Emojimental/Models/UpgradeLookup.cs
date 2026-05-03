@@ -59,7 +59,7 @@ public static class UpgradeLookup
 
     static UpgradeLookup()
     {
-        BigDouble energyProductivity = BigDouble.One;
+        BigDouble energyProductivity = new BigDouble(10);
         BigDouble energyItemCost = new BigDouble(2000);
         BigDouble energyTimeCost = BigDouble.One;
 
@@ -80,11 +80,11 @@ public static class UpgradeLookup
         BigDouble dustBreakerTimeCost = new BigDouble(5);
 
         BigDouble farmProductivity = BigDouble.One;
-        BigDouble farmItemCost = new BigDouble(250000);
+        BigDouble farmItemCost = new BigDouble(250000); // Lvl 1 upgrade cost
         BigDouble farmTimeCost = new BigDouble(10);
 
         BigDouble woodcutterProductivity = new BigDouble(10);
-        BigDouble woodcutterItemCost = new BigDouble(500000);
+        BigDouble woodcutterItemCost = new BigDouble(500000); // Lvl 1 upgrade cost
         BigDouble woodcutterTimeCost = new BigDouble(50);
 
         BigDouble builderProductivity = BigDouble.One;
@@ -100,7 +100,7 @@ public static class UpgradeLookup
         BigDouble bonfireTimeCost = new BigDouble(500);
 
         BigDouble recyclerProductivity = BigDouble.One;
-        BigDouble recyclerItemCost = new BigDouble(100000);
+        BigDouble recyclerItemCost = new BigDouble(500000); // Lvl 1 upgrade cost
         BigDouble recyclerTimeCost = new BigDouble(10);
 
         BigDouble temperatureMaxCost = new BigDouble(1000);
@@ -109,24 +109,24 @@ public static class UpgradeLookup
         for (int i = 1; i <= MaxLevel; i++)
         {
             // Snowman cost: 10 * 1.5^(i-1)
-            _snowmanCosts[i] = new BigDouble(10 * Math.Pow(1.5, i - 1));
+            _snowmanCosts[i] = new BigDouble(10 * Math.Pow(1.45, i - 1));
 
             // Sapling cost: 10000 * 2^(i-1) (100x more expensive)
-            _saplingCosts[i] = new BigDouble(10000 * Math.Pow(2, i - 1));
+            _saplingCosts[i] = new BigDouble(10000 * Math.Pow(1.8, i - 1));
 
             // Temperature cost: lvl1=1000, f(n) = f(n-1)*1.7
             _temperatureMaxCosts[i] = temperatureMaxCost;
-            temperatureMaxCost = Floor(temperatureMaxCost * 1.7);
+            temperatureMaxCost = Floor(temperatureMaxCost * 1.9);
 
-            // Stars cost: lvl1=10, f(n) = f(n-1)*10
+            // Stars cost: lvl1=10, f(n) = f(n-1)*100
             _starUpgradeCosts[i] = starUpgradeCost;
-            starUpgradeCost = Floor(starUpgradeCost * 10);
+            starUpgradeCost = Floor(starUpgradeCost * 100);
 
             // Energy (Solar Panel)
             _energyProductivityValues[i] = energyProductivity;
             energyProductivity = Floor((energyProductivity + 1) * 1.2);
             _energyItemUpgradeCosts[i] = energyItemCost;
-            energyItemCost = Floor(energyItemCost * Math.Pow(1.5, 1 + 0.1 * (i + 1)));
+            energyItemCost = Floor(energyItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _energyTimeUpgradeCosts[i] = energyTimeCost;
             energyTimeCost *= 1.3;
 
@@ -134,7 +134,7 @@ public static class UpgradeLookup
             _snowProductivityValues[i] = snowProductivity;
             snowProductivity = Floor((snowProductivity + 1) * 1.2);
             _snowItemUpgradeCosts[i] = snowItemCost;
-            snowItemCost = Floor(snowItemCost * Math.Pow(1.5, 1 + 0.1 * (i + 1)));
+            snowItemCost = Floor(snowItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _snowTimeUpgradeCosts[i] = snowTimeCost;
             snowTimeCost *= 1.3;
 
@@ -152,15 +152,15 @@ public static class UpgradeLookup
 
             // Researcher Value Upgrade cost (Gold): f(n+1)=f(n)(3*1.9^(1+0.1*n))
             _researcherItemUpgradeCosts[i] = resItemCost;
-            resItemCost = Floor(resItemCost * (3 * Math.Pow(1.5, 1 + 0.1 * (i - 1))));
+            resItemCost = Floor(resItemCost * (3 * Math.Pow(1.3, 1 + 0.1 * (i - 1))));
 
             // Smelter Value Upgrade cost (Gold): lvl1=500, f(n+1)=FLOOR(f(n)(1.7^(1+0.1(n+1))))
             _smelterItemUpgradeCosts[i] = smelterItemCost;
-            smelterItemCost = Floor(smelterItemCost * Math.Pow(1.4, 1 + 0.05 * (i + 1)));
+            smelterItemCost = Floor(smelterItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
 
             // Dust Breaker Value Upgrade cost (Gold): lvl1=20000, f(n+1)=FLOOR(f(n)(1.9^(1+0.1(n+1))))
             _dustBreakerItemUpgradeCosts[i] = dustBreakerItemCost;
-            dustBreakerItemCost = Floor(dustBreakerItemCost * Math.Pow(1.5, 1 + 0.05 * (i + 1)));
+            dustBreakerItemCost = Floor(dustBreakerItemCost * Math.Pow(1.4, 1 + 0.05 * (i + 1)));
 
             // Researcher Cooldown Upgrade cost (Dust): 2 * 1.5^n
             _researcherTimeUpgradeCosts[i] = 2 * Math.Pow(1.5, i);
@@ -179,7 +179,7 @@ public static class UpgradeLookup
 
             // Farm Value Upgrade cost (Gold): lvl1=250000, f(n+1)=FLOOR(f(n)(1.9^(1+0.1(n+1))))
             _farmItemUpgradeCosts[i] = farmItemCost;
-            farmItemCost = Floor(farmItemCost * Math.Pow(1.6, 1 + 0.05 * (i + 1)));
+            farmItemCost = Floor(farmItemCost * Math.Pow(1.4, 1 + 0.05 * (i + 1)));
 
             // Farm Cooldown Upgrade cost (Stardust): lvl1=10, f(n) = f(n-1)*1.5
             _farmTimeUpgradeCosts[i] = farmTimeCost;
@@ -203,7 +203,7 @@ public static class UpgradeLookup
 
             // Builder Value Upgrade cost (Gold): lvl1=1000000, f(n+1)=FLOOR(f(n)*2.1^(1+0.1*(n+1)))
             _builderItemUpgradeCosts[i] = builderItemCost;
-            builderItemCost = Floor(builderItemCost * Math.Pow(1.9, 1 + 0.1 * (i + 1)));
+            builderItemCost = Floor(builderItemCost * Math.Pow(1.5, 1 + 0.1 * (i + 1)));
 
             // Builder Cooldown Upgrade cost (Stardust): lvl1=100, f(n) = f(n-1)*1.2
             _builderTimeUpgradeCosts[i] = builderTimeCost;
@@ -213,7 +213,7 @@ public static class UpgradeLookup
             _gardenProductivityValues[i] = gardenProductivity;
             gardenProductivity *= 1.2;
             _gardenItemUpgradeCosts[i] = gardenItemCost;
-            gardenItemCost = Floor(gardenItemCost * Math.Pow(1.5, 1 + 0.05 * (i + 1)));
+            gardenItemCost = Floor(gardenItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _gardenTimeUpgradeCosts[i] = gardenTimeCost;
             gardenTimeCost *= 1.4;
 
@@ -391,7 +391,7 @@ public static class UpgradeLookup
             return count switch
             {
                 0 => 5000,
-                1 => 100000000,
+                1 => 50000000,
                 _ => BigDouble.Zero // Max 2 will be handled in GameState
             };
         }
@@ -399,7 +399,7 @@ public static class UpgradeLookup
         {
             return count switch
             {
-                0 => 100000,
+                0 => 1000000,
                 _ => BigDouble.Zero // Max 1 will be handled in GameState
             };
         }
@@ -407,7 +407,7 @@ public static class UpgradeLookup
         {
             return count switch
             {
-                0 => 50000,
+                0 => 100000,
                 1 => 50000000,
                 _ => BigDouble.Zero
             };
@@ -434,8 +434,8 @@ public static class UpgradeLookup
         {
             return count switch
             {
-                0 => 10000,
-                1 => 1000000,
+                0 => 500000,
+                1 => 100000000,
                 _ => BigDouble.Zero
             };
         }
@@ -461,19 +461,13 @@ public static class UpgradeLookup
     public static BigDouble GetSnowmanCoinBonus(int count)
     {
         if (count <= 0) return BigDouble.Zero;
-        return 7 * new BigDouble(Math.Pow(1.3, count - 1)) - 6;
-    }
-
-    public static BigDouble GetSnowmanHappinessBonus(int count)
-    {
-        if (count <= 0) return BigDouble.Zero;
-        return 7 * new BigDouble(Math.Pow(1.2, count - 1)) - 6;
+        return 7 * new BigDouble(Math.Pow(1.33, count - 1)) - 6;
     }
 
     public static BigDouble GetSnowmanCarrotBonus(int count)
     {
         if (count <= 0) return BigDouble.Zero;
-        return 7 * new BigDouble(Math.Pow(1.2, count - 1)) - 6;
+        return 7 * new BigDouble(Math.Pow(1.33, count - 1)) - 6;
     }
 
     private static BigDouble Floor(BigDouble value)

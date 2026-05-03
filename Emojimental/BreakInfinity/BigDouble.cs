@@ -138,12 +138,17 @@ public readonly struct BigDouble :
             return "0";
 
         if (Exponent < -324)
-            return "0.00";
+            return "0";
 
         if (Exponent < 3)
         {
             var d = Mantissa * Pow10(Exponent);
-            return d.ToString("0.00", CultureInfo.InvariantCulture);
+            var r3 = Math.Round(d, 2, MidpointRounding.AwayFromZero);
+            if (Math.Abs(r3) < 0.015d)
+                return "0";
+            if (Math.Abs(r3 - 0.01d) < 0.005d)
+                return "0";
+            return r3.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         if (Exponent < 6)
@@ -157,14 +162,14 @@ public readonly struct BigDouble :
         var m = Mantissa;
         var e = Exponent;
 
-        var rounded = Math.Round(m, 3, MidpointRounding.AwayFromZero);
+        var rounded = Math.Round(m, 2, MidpointRounding.AwayFromZero);
         if (Math.Abs(rounded) >= 10d)
         {
             rounded /= 10d;
             e += 1;
         }
 
-        return rounded.ToString("0.000", CultureInfo.InvariantCulture) + "E" + e.ToString(CultureInfo.InvariantCulture);
+        return rounded.ToString("0.00", CultureInfo.InvariantCulture) + "E" + e.ToString(CultureInfo.InvariantCulture);
     }
 
     public string TS() => Display();
@@ -193,12 +198,12 @@ public readonly struct BigDouble :
 
         // Default / General
         if (string.IsNullOrWhiteSpace(format))
-            return FormatGeneral(significantDigits: 4, provider);
+            return FormatGeneral(significantDigits: 3, provider);
 
         // Support G / G{n} as "significant digits".
         if (format.StartsWith("G", StringComparison.OrdinalIgnoreCase))
         {
-            var sig = 4;
+            var sig = 3;
             if (format.Length > 1 && int.TryParse(format[1..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
                 sig = Math.Clamp(parsed, 1, 17);
 
@@ -208,7 +213,7 @@ public readonly struct BigDouble :
         // Support E / E{n} similarly to double: {n} = digits after decimal.
         if (format.StartsWith("E", StringComparison.OrdinalIgnoreCase))
         {
-            var decimals = 3;
+            var decimals = 2;
             if (format.Length > 1 && int.TryParse(format[1..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
                 decimals = Math.Clamp(parsed, 0, 15);
 
@@ -218,10 +223,29 @@ public readonly struct BigDouble :
         // For other numeric formats (F2, N0, custom patterns...), fall back to double when representable.
         var asDouble = ToDouble();
         if (!double.IsInfinity(asDouble) && !double.IsNaN(asDouble))
+        {
+            // If they asked for something like "F3" or "N3", they'll get 3 decimals here.
+            // But if the issue says "everywhere", maybe they want to limit this too?
+            // "should be displayed with 2 decimal points, not 3. everywhere"
+            // Let's see if we should override F and N formats too.
+            if ((format.StartsWith("F", StringComparison.OrdinalIgnoreCase) || format.StartsWith("N", StringComparison.OrdinalIgnoreCase))
+                && format.Length > 1 && int.TryParse(format[1..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var p) && p > 2)
+            {
+                 return asDouble.ToString(format[0] + "2", provider);
+            }
+
+            // Also check for G format that might result in more than 2 decimals for double
+            if (format.StartsWith("G", StringComparison.OrdinalIgnoreCase))
+            {
+                 // We already handled G{n} above but just in case it falls through
+                 return FormatGeneral(significantDigits: 3, provider);
+            }
+
             return asDouble.ToString(format, provider);
+        }
 
         // Otherwise, fall back to a stable scientific format.
-        return FormatGeneral(significantDigits: 4, provider);
+        return FormatGeneral(significantDigits: 3, provider);
     }
 
     private string FormatGeneral(int significantDigits, IFormatProvider provider)
@@ -254,7 +278,7 @@ public readonly struct BigDouble :
 
         var mantissaFormat = decimals == 0
             ? "0"
-            : "0." + new string('#', decimals);
+            : "0." + new string('0', decimals);
 
         var mantissaText = rounded.ToString(mantissaFormat, provider);
         return mantissaText + "E" + e.ToString(CultureInfo.InvariantCulture);
@@ -272,6 +296,12 @@ public readonly struct BigDouble :
         var d = value.ToDouble();
         return new BigDouble(Math.Floor(d));
     }
+
+    public static BigDouble Min(BigDouble left, BigDouble right)
+        => left < right ? left : right;
+
+    public static BigDouble Max(BigDouble left, BigDouble right)
+        => left > right ? left : right;
 
     private static void Normalize(double mantissa, int exponent, out double mantissaOut, out int exponentOut)
     {

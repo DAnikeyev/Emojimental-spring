@@ -5,11 +5,11 @@
 
 <div class="victory-overlay">
     <div class="victory-background">
-        @for (int i = 0; i < 50; i++)
+        @for (int i = 0; i < 150; i++)
         {
             var leftStr = Random.Shared.Next(0, 100).ToString() + "%";
             var topStr = Random.Shared.Next(0, 100).ToString() + "%";
-            var delayStr = (Random.Shared.NextDouble() * 2).ToString("F2") + "s";
+            var delayStr = (Random.Shared.NextDouble() * 15).ToString("F2") + "s";
             var emoji = Random.Shared.Next(0, 2) == 0 ? "🌿" : "🌲";
             <div class="victory-emoji" style="left: @leftStr; top: @topStr; animation-delay: @delayStr">
                 @emoji
@@ -18,11 +18,11 @@
     </div>
     
     <div class="fireworks">
-        @for (int i = 0; i < 10; i++)
+        @for (int i = 0; i < 15; i++)
         {
             var leftStr = Random.Shared.Next(10, 90).ToString() + "%";
             var topStr = Random.Shared.Next(10, 60).ToString() + "%";
-            var delayStr = (Random.Shared.NextDouble() * 1.5).ToString("F2") + "s";
+            var delayStr = (5 + Random.Shared.NextDouble() * 10).ToString("F2") + "s";
             <div class="firework" style="left: @leftStr; top: @topStr; animation-delay: @delayStr"></div>
         }
     </div>

@@ -1,7 +1,7 @@
 ﻿@implements IDisposable
 @inject GameState GameState
 @using Emojimental.Models
-<aside class="left-sidebar">
+<aside class="left-sidebar" data-cycle-phase="@CyclePhase">
     <nav class="left-sidebar__menu">
         <div class="left-sidebar__menu-item @(ActiveMenu == "Factory" ? "left-sidebar__menu-item--active" : "")" 
              @onclick='() => SetMenu("Factory")' title="Factory">
@@ -45,6 +45,16 @@
 @code {
     private string ActiveMenu { get; set; } = "Factory";
     private DateTime _lastUpdate = DateTime.MinValue;
+
+    private string CyclePhase
+    {
+        get
+        {
+            var p = GameState.DayCyclePosition;
+            if (p is >= 0.25 and <= 0.75) return "day";
+            return "night";
+        }
+    }
 
     protected override void OnInitialized()
     {

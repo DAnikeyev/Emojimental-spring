@@ -37,7 +37,10 @@
     {
         <ResourceItem Type="ResourceType.Wood" Value="GameState.Wood" Label="Wood"/>
     }
-    <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    @if (GameState.Cheats)
+    {
+        <button class="cheat-button" @onclick="GameState.CheatResources">@EmojiBank.Symbol(SymbolType.Plus)</button>
+    }
     <div class="timer-and-volume">
         <span class="timer">@FormatPlayTime(GameState.PlayTime)</span>
         <div class="volume-control">
@@ -66,7 +69,7 @@
     protected override void OnInitialized()
     {
         GameState.Changed += OnGameStateChanged;
-        GameState.RequestUiUpdate += OnRequestUiUpdate;
+        GameState.RequestResourceUiUpdate += OnRequestUiUpdate;
     }
 
     private double GetVolume()
@@ -118,14 +121,26 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private bool _shouldRender = true;
     private void OnRequestUiUpdate()
     {
+        _shouldRender = true;
         InvokeAsync(StateHasChanged);
+    }
+
+    protected override bool ShouldRender()
+    {
+        if (_shouldRender)
+        {
+            _shouldRender = false;
+            return true;
+        }
+        return false;
     }
 
     public void Dispose()
     {
         GameState.Changed -= OnGameStateChanged;
-        GameState.RequestUiUpdate -= OnRequestUiUpdate;
+        GameState.RequestResourceUiUpdate -= OnRequestUiUpdate;
     }
 }

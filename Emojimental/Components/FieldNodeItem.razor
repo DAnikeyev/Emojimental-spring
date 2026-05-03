@@ -1,0 +1,219 @@
+﻿@using Emojimental.Models
+@using System.Globalization
+@using Emojimental.Services
+
+<div class="@GetFieldObjectClasses()"
+     style="left:@(Node.X.ToString("F1", CultureInfo.InvariantCulture))px;top:@(Node.Y.ToString("F1", CultureInfo.InvariantCulture))px;width:@(FieldNode.Size.ToString("F0", CultureInfo.InvariantCulture))px;height:@(FieldNode.Size.ToString("F0", CultureInfo.InvariantCulture))px;"
+     @onpointerdown="OnPointerDownInternal"
+     @onpointerdown:preventDefault="true"
+     @onclick:stopPropagation="true"
+     aria-label="Open @Node.TypeDisplayName details">
+    <div class="field-node__type">@Node.Icon</div>
+
+    @if (Node.Type == FieldNodeType.Builder)
+    {
+        <button type="button"
+                class="field-node__lever"
+                @onclick="@(() => GameState.ToggleFieldObjectLever(Node.Id))"
+                @onclick:stopPropagation="true"
+                @onpointerdown:stopPropagation="true"
+                title="Toggle Market/House">
+            @(Node.BuilderLever == 0 ? "⚖️" : "🏠")
+        </button>
+    }
+
+    <div class="field-node__progress" aria-label="@Node.TypeDisplayName progress">
+        @if (IsFast)
+        {
+            <div class="field-node__progress-fast" aria-hidden="true">@EmojiBank.Symbol(SymbolType.FastProgress)</div>
+        }
+        else
+        {
+            <div class="field-node__progress-fill"
+                 style="width:@(GetInterpolatedProgress())%"></div>
+        }
+    </div>
+
+    <div class="field-node__stats field-node__stats--top">
+        <span>@EmojiBank.Symbol(SymbolType.Second) @Node.CooldownDisplay() <span class="base-value">(@Node.BaseCooldownDisplay())</span></span>
+    </div>
+
+    <div class="field-node__core @(Node.Type == FieldNodeType.Bonfire || Node.Type == FieldNodeType.Smelter ? "field-node__core--compact" : string.Empty)">
+        <span>@Node.Type.Effect()</span>
+    </div>
+
+    @if (Node.Type == FieldNodeType.Recycler)
+    {
+        <div class="field-node__recycler-drop @(GameState.DraggingStarSlotIndex is not null ? "field-node__recycler-drop--active" : "")"
+             @ondragover:preventDefault="true"
+             @ondragenter:preventDefault="true"
+             @ondrop="@(() => GameState.TryPlaceStarInRecycler(Node.Id))"
+             @onclick:stopPropagation="true"
+             @onpointerdown:stopPropagation="true">
+            @EmojiBank.Symbol(SymbolType.Stars)
+            @if (Node.RecycleQueue > 0)
+            {
+                <span class="field-node__recycler-queue">@Node.RecycleQueue</span>
+            }
+        </div>
+    }
+
+    @foreach (var beamStarSlot in GetBeamStarSlots())
+    {
+        <div class="@GetBeamStarSlotClasses(beamStarSlot)"
+             @ondragover:preventDefault="true"
+             @ondrop="@(args => OnBeamStarDrop(beamStarSlot.SourceFieldNodeId, beamStarSlot.SourceSide, args))"
+             @onclick:stopPropagation="true"
+             @onpointerdown:stopPropagation="true"
+             aria-label="Star slot">
+            @if (beamStarSlot.HasStar)
+            {
+                <div class="field-node__star-shell">
+                    <button type="button"
+                            class="field-node__star"
+                            @onclick:stopPropagation="true"
+                            @onpointerdown:stopPropagation="true"
+                            @onmouseenter="@(e => GameState.SetHoveredStar(beamStarSlot.Star, e.ClientX, e.ClientY, HoverSide.Center))"
+                            @onmouseleave="@(e => GameState.SetHoveredStar(null))"
+                            aria-label="Star modifiers">
+                        <div class="left-sidebar__star-icon @GetStarIconClasses(beamStarSlot.Star!)">
+                            @EmojiBank.Symbol(SymbolType.Stars)
+                        </div>
+                    </button>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="field-node__stats field-node__stats--bottom">
+        <span>@Node.ResourceIcon @GameState.GetDisplayedFactoryValue(Node).Display() <span class="base-value">(@GameState.GetDisplayedFactoryBaseValue(Node).Display())</span></span>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FieldNode Node { get; set; } = null!;
+    [Parameter, EditorRequired] public GameState GameState { get; set; } = null!;
+    [Parameter] public EventCallback<PointerEventArgs> OnPointerDown { get; set; }
+    [Parameter] public bool IsDragging { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+
+    private bool IsFast => UsesFastProgressIndicator(Node);
+
+    private string GetFieldObjectClasses()
+    {
+        var typeClass = $"field-node--{Node.Type.CssModifier()}";
+        var draggingClass = IsDragging ? " field-node--dragging" : "";
+        var selectedClass = IsSelected ? " field-node--selected" : "";
+        var pausedClass = Node.IsPaused ? " field-node--paused" : "";
+        var inactiveClass = !Node.IsActive ? " field-node--inactive" : "";
+
+        return $"field-node {typeClass}{draggingClass}{selectedClass}{pausedClass}{inactiveClass}";
+    }
+
+    private string _cachedProgress = "0";
+    private double _lastProgressValue = -1;
+    private int _lastLevel = -1;
+    private bool _lastIsActive = true;
+    private bool _lastIsPaused = false;
+    private bool _lastIsSelected = false;
+    private bool _lastIsDragging = false;
+    private int _lastRecycleQueue = -1;
+    private int _lastBuilderLever = -1;
+
+    private string GetInterpolatedProgress()
+    {
+        if (Math.Abs(Node.ProgressPercent - _lastProgressValue) < 1.0)
+        {
+            return _cachedProgress;
+        }
+        _lastProgressValue = Node.ProgressPercent;
+        _cachedProgress = _lastProgressValue.ToString("F0", CultureInfo.InvariantCulture);
+        return _cachedProgress;
+    }
+
+    protected override bool ShouldRender()
+    {
+        if (IsDragging != _lastIsDragging) return true;
+        if (IsSelected != _lastIsSelected) return true;
+        if (Node.Level != _lastLevel) return true;
+        if (Node.IsActive != _lastIsActive) return true;
+        if (Node.IsPaused != _lastIsPaused) return true;
+        if (Node.RecycleQueue != _lastRecycleQueue) return true;
+        if (Node.BuilderLever != _lastBuilderLever) return true;
+        if ((GameState.DraggingStarSlotIndex is not null) != _lastHasDraggingStar) return true;
+        
+        // Progress percent check - check for 1% change for less frequent renders
+        if (!IsFast && Math.Abs(Node.ProgressPercent - _lastProgressValue) >= 1.0) return true;
+        
+        return false;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // We don't update last values here because ShouldRender needs them to compare.
+        // But we must ensure that after a render, they are updated.
+    }
+
+    private bool _lastHasDraggingStar = false;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _lastIsDragging = IsDragging;
+        _lastIsSelected = IsSelected;
+        _lastLevel = Node.Level;
+        _lastIsActive = Node.IsActive;
+        _lastIsPaused = Node.IsPaused;
+        _lastRecycleQueue = Node.RecycleQueue;
+        _lastBuilderLever = Node.BuilderLever;
+        _lastHasDraggingStar = GameState.DraggingStarSlotIndex is not null;
+    }
+
+    private void OnPointerDownInternal(PointerEventArgs args)
+    {
+        OnPointerDown.InvokeAsync(args);
+    }
+
+    private IEnumerable<BeamStarSlot> GetBeamStarSlots()
+    {
+        if (!GameState.AreFactoryStarSlotsUnlocked())
+            yield break;
+
+        var allSlots = GameState.BeamStarSlots;
+        for (var i = 0; i < allSlots.Count; i++)
+        {
+            var slot = allSlots[i];
+            if (slot.SourceFieldNodeId == Node.Id)
+                yield return slot;
+        }
+    }
+
+    private string GetBeamStarSlotClasses(BeamStarSlot beamStarSlot)
+    {
+        var side = beamStarSlot.SourceSide.ToString().ToLowerInvariant();
+        var filled = beamStarSlot.HasStar ? " field-node__beam-slot--filled" : "";
+        var glow = (!beamStarSlot.HasStar && GameState.CanPlaceStar(beamStarSlot.SourceFieldNodeId, beamStarSlot.SourceSide)) ? " field-node__beam-slot--glow" : "";
+
+        return $"field-node__beam-slot field-node__beam-slot--{side}{filled}{glow}";
+    }
+
+    private void OnBeamStarDrop(int sourceFieldNodeId, FieldNodeSide sourceSide, DragEventArgs _)
+    {
+        GameState.TryPlaceStar(sourceFieldNodeId, sourceSide);
+    }
+
+    private static string GetStarIconClasses(Star star)
+        => star.Type switch
+        {
+            StarType.Legendary => "star--legendary",
+            StarType.Blue => "star--rare",
+            _ => string.Empty
+        };
+
+    private static bool UsesFastProgressIndicator(FieldNode fieldObject)
+    {
+        var cooldownSeconds = fieldObject.EvaluateCooldown().ToDouble();
+        return !double.IsNaN(cooldownSeconds)
+               && !double.IsInfinity(cooldownSeconds)
+               && cooldownSeconds <= 0.2d;
+    }
+}

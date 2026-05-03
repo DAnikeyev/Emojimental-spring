@@ -164,34 +164,63 @@
         }
     },
 
-    addStarTrail(x, y) {
-        for (let i = 0; i < 2; i++) {
-            this.starParticles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 10,
-                vy: (Math.random() - 0.5) * 10,
-                life: 0.5 + Math.random() * 0.5,
-                size: 0.5 + Math.random() * 0.5,
-                emoji: "✨"
-            });
-        }
+    addStarTrailRelative(element, xPercent, yPercent) {
+        if (!this.canvas || !element) return;
+        const rect = element.getBoundingClientRect();
+        // star.X/Y are in %, so we multiply by rect width/height to get pixels relative to element
+        const xPx = (xPercent / 100) * rect.width;
+        const yPx = (yPercent / 100) * rect.height;
+        const x = ((rect.left + xPx) / window.innerWidth) * 100;
+        const y = ((rect.top + yPx) / window.innerHeight) * 100;
+        this.addStarTrail(x, y);
     },
 
-    addStarExplosion(x, y) {
-        for (let i = 0; i < 20; i++) {
+    addStarTrail(x, y) {
+        this.starParticles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            life: 0.4 + Math.random() * 0.4,
+            size: 0.6 + Math.random() * 0.6,
+            emoji: "✨"
+        });
+    },
+
+    addStarExplosionRelative(element, xPercent, yPercent, count) {
+        if (!this.canvas || !element) return;
+        const rect = element.getBoundingClientRect();
+        const xPx = (xPercent / 100) * rect.width;
+        const yPx = (yPercent / 100) * rect.height;
+        const x = ((rect.left + xPx) / window.innerWidth) * 100;
+        const y = ((rect.top + yPx) / window.innerHeight) * 100;
+        this.addStarExplosion(x, y, count);
+    },
+
+    addStarExplosion(x, y, count) {
+        const pCount = count !== undefined ? count : 12;
+        for (let i = 0; i < pCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = 20 + Math.random() * 40;
+            const speed = 10 + Math.random() * 40;
             this.starParticles.push({
                 x: x,
                 y: y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                life: 1 + Math.random() * 1,
+                life: 0.8 + Math.random() * 0.8,
                 size: 0.8 + Math.random() * 1.2,
-                emoji: Math.random() > 0.5 ? "⭐" : "✨"
+                emoji: Math.random() > 0.4 ? "⭐" : "✨"
             });
         }
+    },
+
+    addResourceParticlesRelative(element, x, y, emoji, count, life) {
+        if (!this.canvas || !element) return;
+        const rect = element.getBoundingClientRect();
+        // Convert local pixel coords to percentage relative to viewport for the canvas
+        const xPercent = ((rect.left + x) / window.innerWidth) * 100;
+        const yPercent = ((rect.top + y) / window.innerHeight) * 100;
+        this.addResourceParticles(xPercent, yPercent, emoji, count, life);
     },
 
     addResourceParticles(xPercent, yPercent, emoji, count, life) {

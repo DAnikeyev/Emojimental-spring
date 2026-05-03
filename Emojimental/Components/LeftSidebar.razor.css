@@ -7,10 +7,16 @@
     position: sticky;
     top: 0;
     background: linear-gradient(180deg, #ffffff, #eef4ff);
+    transition: background 1s ease, border-color 1s ease;
     border: 1px solid #d8e2f3;
     border-radius: 1rem;
     box-shadow: 0 14px 30px rgba(39, 72, 121, 0.12);
     width: 16.5rem;
+}
+
+.left-sidebar[data-cycle-phase="night"] {
+    background: linear-gradient(180deg, #f8f9fb, #e4eaf5);
+    border-color: #cbd5e7;
 }
 
 .left-sidebar__menu {
@@ -20,6 +26,16 @@
     border-right: none;
     border-bottom: 1px solid #d8e2f3;
     background: rgba(255, 255, 255, 0.5);
+    transition: background 1s ease, border-color 1s ease;
+}
+
+.left-sidebar[data-cycle-phase="night"] .left-sidebar__menu {
+    background: rgba(240, 244, 250, 0.5);
+    border-color: #cbd5e7;
+}
+
+.left-sidebar[data-cycle-phase="night"] .left-sidebar__menu-item {
+    border-color: #cbd5e7;
 }
 
 .left-sidebar__menu-item {
@@ -30,7 +46,7 @@
     height: 3rem;
     font-size: 1.1rem;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s, border-color 1s ease;
     border-right: 1px solid #d8e2f3;
 }
 

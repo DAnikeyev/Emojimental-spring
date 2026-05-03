@@ -103,4 +103,15 @@ public static class EmojiBank
             SymbolType.Goal => "🎯",
             _ => "✨"
         };
+
+    public static string Happiness(double value)
+        => value switch
+        {
+            < 20 => "😭",
+            < 40 => "😟",
+            < 60 => "😐",
+            < 80 => "🙂",
+            < 100 => "😊",
+            _ => "🤩"
+        };
 }

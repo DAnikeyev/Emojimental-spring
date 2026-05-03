@@ -96,14 +96,14 @@ public static class FieldNodeTypeExtensions
         {
             FieldNodeType.Energy => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Energy)}",
             FieldNodeType.Snow => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Ice)}",
-            FieldNodeType.Smelter => $"{EmojiBank.Resource(ResourceType.Energy)}{EmojiBank.Resource(ResourceType.Ice)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Water)}",
-            FieldNodeType.Woodcutter => $"{EmojiBank.Resource(ResourceType.Tree)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Wood)}",
-            FieldNodeType.Builder => $"{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Arrow)}🏛️",
-            FieldNodeType.Bonfire => $"{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Plus)}10{EmojiBank.Resource(ResourceType.Energy)}{EmojiBank.Symbol(SymbolType.Arrow)}30{EmojiBank.Resource(ResourceType.Energy)}",
-            FieldNodeType.Recycler => $"{EmojiBank.Symbol(SymbolType.Stars)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.StarDust)}",
+            FieldNodeType.Smelter => $"{10}{EmojiBank.Resource(ResourceType.Energy)}{10}{EmojiBank.Resource(ResourceType.Ice)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Water)}",
+            FieldNodeType.Woodcutter => $"{EmojiBank.Resource(ResourceType.Tree)}{EmojiBank.Symbol(SymbolType.Arrow)}10{EmojiBank.Resource(ResourceType.Wood)}",
+            FieldNodeType.Builder => $"{100}{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Arrow)}🏛️",
+            FieldNodeType.Bonfire => $"{10}{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Plus)}{1000}{EmojiBank.Resource(ResourceType.Energy)}{EmojiBank.Symbol(SymbolType.Arrow)}{3000}{EmojiBank.Resource(ResourceType.Energy)}",
+            FieldNodeType.Recycler => $"{EmojiBank.Symbol(SymbolType.Stars)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Symbol(SymbolType.Multiply)}{EmojiBank.Resource(ResourceType.StarDust)}",
             FieldNodeType.Researcher => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.ResearchPoint)}",
             FieldNodeType.DustBreaker => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.StarDust)}",
-            FieldNodeType.Farm => $"{EmojiBank.Resource(ResourceType.Water)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Tree)}",
+            FieldNodeType.Farm => $"{EmojiBank.Resource(ResourceType.Sapling)}{EmojiBank.Symbol(SymbolType.Multiply)}{EmojiBank.Resource(ResourceType.Water)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Tree)}",
             _ => ""
         };
 
@@ -112,14 +112,14 @@ public static class FieldNodeTypeExtensions
         {
             FieldNodeType.Energy => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Energy)}",
             FieldNodeType.Snow => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Ice)}",
-            FieldNodeType.Smelter => $"{EmojiBank.Resource(ResourceType.Energy)}{EmojiBank.Resource(ResourceType.Ice)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Water)}",
-            FieldNodeType.Woodcutter => $"{EmojiBank.Resource(ResourceType.Tree)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Wood)}",
-            FieldNodeType.Builder => $"{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Arrow)}🏛️",
-            FieldNodeType.Bonfire => $"{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Plus)}10{EmojiBank.Resource(ResourceType.Energy)}{EmojiBank.Symbol(SymbolType.Arrow)}30{EmojiBank.Resource(ResourceType.Energy)}",
-            FieldNodeType.Recycler => $"{EmojiBank.Symbol(SymbolType.Stars)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.StarDust)}",
+            FieldNodeType.Smelter => $"{10}{EmojiBank.Resource(ResourceType.Energy)}{10}{EmojiBank.Resource(ResourceType.Ice)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Water)}",
+            FieldNodeType.Woodcutter => $"{EmojiBank.Resource(ResourceType.Tree)}{EmojiBank.Symbol(SymbolType.Arrow)}10{EmojiBank.Resource(ResourceType.Wood)}",
+            FieldNodeType.Builder => $"{100}{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Arrow)}🏛️",
+            FieldNodeType.Bonfire => $"{10}{EmojiBank.Resource(ResourceType.Wood)}{EmojiBank.Symbol(SymbolType.Plus)}{1000}{EmojiBank.Resource(ResourceType.Energy)}{EmojiBank.Symbol(SymbolType.Arrow)}{3000}{EmojiBank.Resource(ResourceType.Energy)}",
+            FieldNodeType.Recycler => $"{EmojiBank.Symbol(SymbolType.Stars)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Symbol(SymbolType.Multiply)}{EmojiBank.Resource(ResourceType.StarDust)}",
             FieldNodeType.Researcher => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.ResearchPoint)}",
             FieldNodeType.DustBreaker => $"{EmojiBank.Symbol(SymbolType.Nothing)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.StarDust)}",
-            FieldNodeType.Farm => $"{EmojiBank.Resource(ResourceType.Water)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Tree)}",
+            FieldNodeType.Farm => $"{EmojiBank.Resource(ResourceType.Sapling)}{EmojiBank.Symbol(SymbolType.Multiply)}{EmojiBank.Resource(ResourceType.Water)}{EmojiBank.Symbol(SymbolType.Arrow)}{EmojiBank.Resource(ResourceType.Tree)}",
             _ => ""
         };
 
@@ -127,10 +127,9 @@ public static class FieldNodeTypeExtensions
     {
         return type.Normalize() switch
         {
-            FieldNodeType.Bonfire => new (ResourceType Type, BigDouble Amount)[]
+            FieldNodeType.Farm => new (ResourceType Type, BigDouble Amount)[]
             {
-                (ResourceType.Wood, 1),
-                (ResourceType.Energy, 1)
+                (ResourceType.Water, 1)
             },
             _ => Enumerable.Empty<(ResourceType Type, BigDouble Amount)>()
         };

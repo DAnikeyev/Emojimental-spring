@@ -25,7 +25,7 @@
 .victory-emoji {
     position: absolute;
     font-size: 2rem;
-    animation: grow 2s ease-out forwards;
+    animation: grow 12s ease-out forwards;
     opacity: 0;
     transform: scale(0);
 }
@@ -51,7 +51,7 @@
     height: 4px;
     border-radius: 50%;
     box-shadow: 0 0 0 0 #fff;
-    animation: explode 2s ease-out infinite;
+    animation: explode 3s ease-out infinite;
 }
 
 @keyframes explode {
@@ -75,7 +75,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: popIn 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1s both;
     position: relative;
     z-index: 10;
 }

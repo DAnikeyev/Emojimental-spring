@@ -4,13 +4,31 @@
 
 <div class="resource-item" aria-label="@Label">
     <span class="resource-item__icon">@EmojiBank.Resource(Type)</span>
-    <span class="resource-item__value">@Evaluate(Value).Display()</span>
+    <span class="resource-item__value">@GetDisplayValue()</span>
 </div>
 
 @code {
     [Parameter, EditorRequired] public ResourceType Type { get; set; }
     [Parameter, EditorRequired] public Stat Value { get; set; }
     [Parameter] public string Label { get; set; } = string.Empty;
+
+    private BigDouble _lastValue = -1;
+    private string _cachedDisplay = "";
+
+    private string GetDisplayValue()
+    {
+        var val = Evaluate(Value);
+        if (val == _lastValue) return _cachedDisplay;
+        _lastValue = val;
+        _cachedDisplay = val.Display();
+        return _cachedDisplay;
+    }
+
+    protected override bool ShouldRender()
+    {
+        // Only re-render if the value has changed
+        return Evaluate(Value) != _lastValue;
+    }
 
     private BigDouble Evaluate(Stat stat) => new EvaluationContext().Get(stat);
 }

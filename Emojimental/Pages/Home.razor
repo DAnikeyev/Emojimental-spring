@@ -14,25 +14,33 @@
 </div>
 
 @code {
-    private const double TickSeconds = 1.0 / 30.0;
-    private const double UiUpdateSeconds = 1.0 / 15.0;
+    private const double LogicTickSeconds = 1.0 / 60.0;
+    private const double UiTickSeconds = 1.0 / 20.0; // Slowed down from 30 FPS to 20 FPS
+    private const double ResourceTickSeconds = 1.0 / 5.0; // 5 FPS for resources
 
     [Inject] public required GameState GameState { get; set; }
 
-    private Timer? _tickTimer;
+    private Timer? _logicTimer;
     private Timer? _uiTimer;
-    private bool _uiUpdateRequested;
+    private Timer? _resourceTimer;
     private long _lastTickTimestamp;
 
     protected override void OnInitialized()
     {
         GameState.RequestUiUpdate += OnRequestUiUpdate;
         _lastTickTimestamp = Stopwatch.GetTimestamp();
-        _tickTimer = new Timer(_ => TickGame(), null, TimeSpan.Zero, TimeSpan.FromSeconds(TickSeconds));
-        _uiTimer = new Timer(_ => TickUi(), null, TimeSpan.Zero, TimeSpan.FromSeconds(UiUpdateSeconds));
+        
+        // Logic runs at 60 FPS
+        _logicTimer = new Timer(_ => TickLogic(), null, TimeSpan.Zero, TimeSpan.FromSeconds(LogicTickSeconds));
+        
+        // UI updates run at 20 FPS
+        _uiTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(UiTickSeconds), TimeSpan.FromSeconds(UiTickSeconds));
+
+        // Resource updates run at 5 FPS
+        _resourceTimer = new Timer(_ => GameState.NotifyResourceUiUpdate(), null, TimeSpan.FromSeconds(ResourceTickSeconds), TimeSpan.FromSeconds(ResourceTickSeconds));
     }
 
-    private void TickGame()
+    private void TickLogic()
     {
         var currentTimestamp = Stopwatch.GetTimestamp();
         var elapsedSeconds = Stopwatch.GetElapsedTime(_lastTickTimestamp, currentTimestamp).TotalSeconds;
@@ -41,19 +49,13 @@
         GameState.Advance(elapsedSeconds);
     }
 
-    private void OnRequestUiUpdate() => _uiUpdateRequested = true;
-
-    private void TickUi()
-    {
-        if (!_uiUpdateRequested) return;
-        _uiUpdateRequested = false;
-        InvokeAsync(StateHasChanged);
-    }
+    private void OnRequestUiUpdate() { }
 
     public void Dispose()
     {
         GameState.RequestUiUpdate -= OnRequestUiUpdate;
-        _tickTimer?.Dispose();
+        _logicTimer?.Dispose();
         _uiTimer?.Dispose();
+        _resourceTimer?.Dispose();
     }
 }

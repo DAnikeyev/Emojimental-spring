@@ -3,7 +3,7 @@
 @inject IJSRuntime JS
 
 @using Emojimental.Models
-<aside class="temperature-sidebar" style="@TemperatureThemeStyle()">
+<aside class="temperature-sidebar" style="@_themeStyle">
     <div class="temperature-sidebar__top">
         @if (GameState.CanAdjustTemperature())
         {
@@ -32,7 +32,7 @@
                              @onpointercancel="OnPointerUp"
                              @onkeydown="OnKeyDown">
                             <div class="temperature-sidebar__vslider-rail"
-                                 style="@RailGradientStyle()"
+                                 style="@_railStyle"
                                  aria-hidden="true"></div>
                             <div class="temperature-sidebar__vslider-thumb"
                                  style="top:@ThumbOffsetPercent()"
@@ -108,9 +108,37 @@
         // Handled by RequestUiUpdate
     }
 
+    private string _themeStyle = "color:initial;";
+    private string _railStyle = "color:initial;";
+    private bool _shouldRender = true;
+    private double _lastUpdateDayCyclePosition;
+    private int _lastUpdateTemperatureCelsius;
+
     private void OnRequestUiUpdate()
     {
-        InvokeAsync(StateHasChanged);
+        // Only update if temperature or day cycle changed enough to affect visuals significantly
+        var temp = GameState.TemperatureCelsius;
+        var dayP = GameState.DayCyclePosition;
+
+        if (Math.Abs(dayP - _lastUpdateDayCyclePosition) > 0.001 || temp != _lastUpdateTemperatureCelsius)
+        {
+            _lastUpdateDayCyclePosition = dayP;
+            _lastUpdateTemperatureCelsius = temp;
+            _themeStyle = TemperatureThemeStyle();
+            _railStyle = RailGradientStyle();
+            _shouldRender = true;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    protected override bool ShouldRender()
+    {
+        if (_shouldRender)
+        {
+            _shouldRender = false;
+            return true;
+        }
+        return false;
     }
 
     private async Task OnPointerDown(PointerEventArgs e)
@@ -182,33 +210,54 @@
     private string ThumbOffsetPercent() => MarkOffsetPercent(GameState.TemperatureCelsius);
 
 
+    private string _cachedThemeStyle = "";
+    private double _lastThemeProgress = -1;
+    private double _lastThemeDayP = -1;
+
     private string TemperatureThemeStyle()
     {
         var progress = GameState.TemperatureProgress;
-        var inv = FormattableString.Invariant;
+        var dayP = GameState.DayCyclePosition;
 
-        return string.Join(";", new[]
+        if (Math.Abs(progress - _lastThemeProgress) < 0.001 && Math.Abs(dayP - _lastThemeDayP) < 0.001)
         {
-            inv($"--temperature-progress:{progress:F3}"),
-            inv($"--temperature-coldness:{1d - progress:F3}"),
-            $"--sidebar-top:{GameState.MixColor(249, 252, 255, 255, 247, 239, progress)}",
-            $"--sidebar-bottom:{GameState.MixColor(229, 238, 252, 255, 225, 196, progress)}",
-            $"--sidebar-accent:{GameState.MixColor(107, 139, 204, 255, 152, 94, progress)}",
-            $"--sidebar-accent-strong:{GameState.MixColor(73, 106, 181, 228, 113, 73, progress)}",
-            $"--sidebar-accent-soft:{GameState.MixColor(194, 218, 255, 255, 221, 186, progress, 0.92d)}",
-            $"--sidebar-surface:{GameState.MixColor(255, 255, 255, 255, 249, 242, progress, 0.82d)}",
-            $"--sidebar-surface-strong:{GameState.MixColor(255, 255, 255, 255, 244, 233, progress, 0.94d)}",
-            $"--sidebar-border:{GameState.MixColor(216, 226, 243, 246, 205, 169, progress)}",
-            $"--sidebar-text:{GameState.MixColor(31, 42, 68, 104, 57, 37, progress)}",
-            $"--sidebar-label:{GameState.MixColor(91, 104, 128, 124, 82, 57, progress)}",
-            $"--sidebar-thumb:{GameState.MixColor(109, 115, 133, 255, 141, 93, progress)}",
-            $"--sidebar-shadow:{GameState.MixColor(46, 74, 122, 158, 83, 35, progress, 0.16d)}",
-            $"--sidebar-chip-shadow:{GameState.MixColor(52, 78, 118, 160, 90, 43, progress, 0.14d)}",
-            $"--sidebar-glow:{GameState.MixColor(126, 166, 235, 255, 176, 104, progress, 0.30d)}",
-            $"--clock-night:{GameState.MixColor(29, 43, 93, 77, 81, 128, progress)}",
-            $"--clock-dawn:{GameState.MixColor(248, 166, 108, 255, 171, 118, progress)}",
-            $"--clock-day:{GameState.MixColor(135, 206, 235, 187, 229, 163, progress)}"
-        }) + ";";
+            return _cachedThemeStyle;
+        }
+
+        _lastThemeProgress = progress;
+        _lastThemeDayP = dayP;
+
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        
+        var nightFactor = 0.85 + 0.15 * Math.Cos((dayP - 0.5) * 2.0 * Math.PI);
+
+        string MixWithNight(int r1, int g1, int b1, int r2, int g2, int b2, double p, double alpha = 1.0)
+        {
+            return GameState.MixColor((int)(r1 * nightFactor), (int)(g1 * nightFactor), (int)(b1 * nightFactor), (int)(r2 * nightFactor), (int)(g2 * nightFactor), (int)(b2 * nightFactor), p, alpha);
+        }
+
+        _cachedThemeStyle = string.Format(inv, "--temperature-progress:{0:F3};--temperature-coldness:{1:F3};--sidebar-top:{2};--sidebar-bottom:{3};--sidebar-accent:{4};--sidebar-accent-strong:{5};--sidebar-accent-soft:{6};--sidebar-surface:{7};--sidebar-surface-strong:{8};--sidebar-border:{9};--sidebar-text:{10};--sidebar-label:{11};--sidebar-thumb:{12};--sidebar-shadow:{13};--sidebar-chip-shadow:{14};--sidebar-glow:{15};--clock-night:{16};--clock-dawn:{17};--clock-day:{18};",
+            progress,
+            1d - progress,
+            MixWithNight(249, 252, 255, 255, 247, 239, progress),
+            MixWithNight(229, 238, 252, 255, 225, 196, progress),
+            MixWithNight(107, 139, 204, 255, 152, 94, progress),
+            MixWithNight(73, 106, 181, 228, 113, 73, progress),
+            MixWithNight(194, 218, 255, 255, 221, 186, progress, 0.92d),
+            MixWithNight(255, 255, 255, 255, 249, 242, progress, 0.82d),
+            MixWithNight(255, 255, 255, 255, 244, 233, progress, 0.94d),
+            MixWithNight(216, 226, 243, 246, 205, 169, progress),
+            MixWithNight(31, 42, 68, 104, 57, 37, progress),
+            MixWithNight(91, 104, 128, 124, 82, 57, progress),
+            MixWithNight(109, 115, 133, 255, 141, 93, progress),
+            MixWithNight(46, 74, 122, 158, 83, 35, progress, 0.16d),
+            MixWithNight(52, 78, 118, 160, 90, 43, progress, 0.14d),
+            MixWithNight(126, 166, 235, 255, 176, 104, progress, 0.30d),
+            GameState.MixColor(29, 43, 93, 77, 81, 128, progress),
+            GameState.MixColor(248, 166, 108, 255, 171, 118, progress),
+            GameState.MixColor(135, 206, 235, 187, 229, 163, progress));
+        
+        return _cachedThemeStyle;
     }
 
     private string MarkOffsetPercent(int mark)
@@ -264,14 +313,19 @@
         var maxTemp = GameState.MaxTemperatureCelsius;
         // Position of max temp from top (0% = top = 20°C, 100% = bottom = -10°C)
         var maxTempPercent = ((SliderMax - maxTemp) / (double)range) * 100d;
-        var progress = GameState.TemperatureProgress;
-        var inv = FormattableString.Invariant;
-        var locked = GameState.MixColor(188, 196, 212, 216, 198, 180, progress);
-        var hot = GameState.MixColor(255, 92, 92, 255, 120, 104, progress);
-        var mild = GameState.MixColor(255, 172, 101, 255, 204, 120, progress);
-        var cool = GameState.MixColor(94, 181, 255, 117, 207, 186, progress);
-        // Frosty blue shifts toward spring greens and warm amber while keeping the locked range muted above max temp.
-        return inv($"background: linear-gradient(180deg, {locked} 0%, {locked} {maxTempPercent:F2}%, {hot} {maxTempPercent:F2}%, {mild} 48%, {cool} 100%)");
+        
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+        // Softer colors
+        var grey = "rgb(180, 185, 195)"; 
+        var softRed = "rgb(255, 110, 110)";
+        var softBlue = "rgb(110, 160, 255)";
+        
+        // Two layers: 
+        // 1. A grey "cover" from 0% to maxTempPercent
+        // 2. The full temperature gradient from +20 (0%) to -10 (100%)
+        return string.Format(inv, "background: linear-gradient(180deg, {0} 0%, {0} {1:F2}%, transparent {1:F2}%), linear-gradient(180deg, {2} 0%, {3} 100%);", 
+            grey, maxTempPercent, softRed, softBlue);
     }
 
 

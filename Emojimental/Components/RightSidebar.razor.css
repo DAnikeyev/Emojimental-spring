@@ -12,8 +12,14 @@
     top: 5rem;
     border-radius: 1rem;
     background: linear-gradient(180deg, #ffffff, #eef4ff);
+    transition: background 1s ease, border-color 1s ease;
     border: 1px solid #d8e2f3;
     box-shadow: 0 14px 30px rgba(39, 72, 121, 0.12);
+}
+
+.right-sidebar[data-cycle-phase="night"] {
+    background: linear-gradient(180deg, #f8f9fb, #e4eaf5);
+    border-color: #cbd5e7;
 }
 
 .right-sidebar__empty {
@@ -128,6 +134,12 @@
     border-radius: 0.75rem;
     background: rgba(255, 255, 255, 0.7);
     border: 1px solid #d8e2f3;
+    transition: background 1s ease, border-color 1s ease;
+}
+
+.right-sidebar[data-cycle-phase="night"] .right-sidebar__passive-row {
+    background: rgba(240, 244, 250, 0.7);
+    border-color: #cbd5e7;
 }
 
 .right-sidebar__passive-row + .right-sidebar__passive-row {

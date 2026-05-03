@@ -110,7 +110,7 @@ public static class ResearchCatalog
             ResearchType.UnlockBuilder,
             ResourceType.ResearchPoint,
             new BigDouble(10000),
-            $"{EmojiBank.Symbol(SymbolType.Plus)}{FieldNodeType.Builder.Icon()}🏠🏪",
+            $"{EmojiBank.Symbol(SymbolType.Plus)}{FieldNodeType.Builder.Icon()}🏠⚖️",
             "builder"),
         new(
             ResearchType.UnlockFlowers,

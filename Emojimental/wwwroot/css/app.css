@@ -390,6 +390,10 @@ code {
     font-weight: 700;
 }
 
+.left-sidebar__wide-button--compact {
+    font-size: 0.75rem;
+}
+
 .left-sidebar__research-status {
     position: absolute;
     top: 0.5rem;
@@ -557,13 +561,21 @@ code {
     flex-direction: column;
     gap: 0.2rem;
     min-width: 8rem;
-    margin: 0.5rem;
     padding: 0.45rem 0.6rem;
     border-radius: 0.65rem;
     border: 1px solid rgba(241, 180, 61, 0.42);
     background: rgba(255, 250, 236, 0.98);
     box-shadow: 0 8px 18px rgba(39, 72, 121, 0.18);
     pointer-events: none;
+}
+
+.global-hover-popup--center,
+.global-hover-popup--right {
+    transform: translateX(calc(-100% - 10px));
+}
+
+.global-hover-popup--left {
+    transform: translateX(10px);
 }
 
 .global-hover-popup div {

@@ -5,13 +5,20 @@ using Emojimental.Models;
 
 namespace Emojimental.Services;
 
+public enum HoverSide
+{
+    Center,
+    Left,
+    Right
+}
+
 public sealed class GameState
 {
     private const double Log10Of2 = 0.3010299956639812d;
-    private const double UiUpdateIntervalSeconds = 1d / 15d;
+    private const double UiUpdateIntervalSeconds = 1d / 60d;
     private const int StarInventorySize = 80;
-    private const int StartingStarCount = 0;
-    private const double DayCycleDurationSeconds = 120; // 2 minutes per day
+    private const int StartingStarCount = 3;
+    public const double DayCycleDurationSeconds = 60; // testing
     private const int InitialTemperatureCelsius = -5;
     private const int InitialMaxTemperatureCelsius = -5;
 
@@ -28,14 +35,23 @@ public sealed class GameState
     private readonly Dictionary<PassiveStatType, BigDouble> _passiveStatStarMultipliers = Enum.GetValues<PassiveStatType>()
         .ToDictionary(t => t, _ => BigDouble.One);
     private const double PassiveStarMultiplierPerStar = 2d;
+
+    public static BigDouble Log2(BigDouble value)
+    {
+        if (value <= 0) return BigDouble.Zero;
+        var log10 = Math.Log10(value.Mantissa) + value.Exponent;
+        return log10 / Log10Of2;
+    }
     private double _pendingUiUpdateSeconds;
+    private const double MinUiUpdateInterval = 1d / 30d; // Reduced to 30 FPS for better performance
 
     public GameState()
     {
         Temperature.BaseValue = new BigDouble(InitialTemperatureCelsius);
         Stars.BaseValue = BigDouble.Zero;
         RecycledStars.BaseValue = BigDouble.Zero;
-        Coin.BaseValue = 5;
+        Coin.BaseValue = 5; // testing
+        ApplyPassiveStatStarModifiers();
     }
 
     public double TemperatureProgress
@@ -85,6 +101,9 @@ public sealed class GameState
     public Stat RecycledStars { get; } = new();
     public Stat MusicVolume { get; } = new() { BaseValue = 0.5 };
 
+    public bool Cheats { get; set; } = true; // testing
+    public bool ParticlesEnabled { get; set; } = false;
+    public double GameSpeed { get; set; } = 1.0;
     public Stat Stars { get; } = new();
     public bool IsMuted { get; private set; }
     public bool IsWeatherDisabled { get; private set; }
@@ -179,22 +198,28 @@ public sealed class GameState
     public event Action? Changed;
     public event Action<FieldNode, int>? OnResourceProduced;
     public event Action? RequestUiUpdate;
+    public event Action? RequestResourceUiUpdate;
+    public void NotifyResourceUiUpdate() => RequestResourceUiUpdate?.Invoke();
+
     public Star? HoveredStar { get; private set; }
     public PassiveStatType? HoveredPassiveStat { get; private set; }
+    public HoverSide CurrentHoverSide { get; private set; }
     public (double X, double Y) HoveredInfoPosition { get; private set; }
 
-    public void SetHoveredStar(Star? star, double x = 0, double y = 0)
+    public void SetHoveredStar(Star? star, double x = 0, double y = 0, HoverSide side = HoverSide.Center)
     {
         HoveredStar = star;
         HoveredPassiveStat = null;
+        CurrentHoverSide = side;
         HoveredInfoPosition = (x, y);
         RequestUiUpdate?.Invoke();
     }
 
-    public void SetHoveredPassiveStat(PassiveStatType? type, double x = 0, double y = 0)
+    public void SetHoveredPassiveStat(PassiveStatType? type, double x = 0, double y = 0, HoverSide side = HoverSide.Center)
     {
         HoveredPassiveStat = type;
         HoveredStar = null;
+        CurrentHoverSide = side;
         HoveredInfoPosition = (x, y);
         RequestUiUpdate?.Invoke();
     }
@@ -211,6 +236,49 @@ public sealed class GameState
 
     public int DaysElapsed => (int)(PlayTime.TotalSeconds / DayCycleDurationSeconds);
 
+    public Star GenerateRandomStar()
+    {
+        var evalValue = EvaluatePassiveStat(PassiveStatType.Happiness).ToDouble();
+        var h = Math.Min(Math.Log2(evalValue + 1), 100);
+
+        StarType type;
+        var legendaryProb = Math.Sqrt(Math.Max(h - 25, 0)) / 100.0;
+        var rareProb = Math.Sqrt(h) / 100.0;
+
+        var r = _random.NextDouble();
+        if (r < legendaryProb) type = StarType.Legendary;
+        else if (r < legendaryProb + rareProb) type = StarType.Blue;
+        else type = StarType.Yellow;
+
+        var statH = type == StarType.Legendary ? h * 1.5 : h;
+
+        BigDouble prodMult = 1;
+        if (type == StarType.Yellow || type == StarType.Legendary)
+        {
+            var w = MathHelper.NextGamma(2.0, Math.Max(0.001, statH / 10.0));
+            var value = Math.Max(1.5, Math.Pow(1.3, w));
+            prodMult = new BigDouble(value);
+        }
+
+        double cdReduction = 0;
+        if (type == StarType.Blue || type == StarType.Legendary)
+        {
+            var w = MathHelper.NextGamma(2.0, Math.Max(0.001, statH / 10.0)) / 10.0;
+            cdReduction = Math.Max(0.1, w);
+        }
+
+        // Console.WriteLine($"Generating star with Happiness stat {evalValue:F2} and derived h value {h:F2}: Type={type}, ProdMult={prodMult}, CdReduction={cdReduction}");
+        int recycleValue = type switch
+        {
+            StarType.Yellow => 1,
+            StarType.Blue => 3,
+            StarType.Legendary => 20,
+            _ => 1
+        };
+
+        return new Star(type, prodMult, cdReduction, recycleValue);
+    }
+
     public void AddStarToInventory()
     {
         if (!HasResearch(ResearchType.UnlockStars)) return;
@@ -218,44 +286,20 @@ public sealed class GameState
         var emptySlot = _starInventory.FirstOrDefault(s => !s.HasStar);
         if (emptySlot != null)
         {
-            var evalValue = EvaluatePassiveStat(PassiveStatType.Happiness).ToDouble();
-            var h = Math.Min(Math.Log2(evalValue + 1), 100);
+            var star = GenerateRandomStar();
+            emptySlot.AddStar(star);
+            Changed?.Invoke();
+        }
+    }
 
-            StarType type;
-            var legendaryProb = Math.Sqrt(Math.Max(h - 25, 0)) / 100.0;
-            var rareProb = Math.Sqrt(h) / 100.0;
+    public void AddStarToInventory(Star star)
+    {
+        if (!HasResearch(ResearchType.UnlockStars)) return;
 
-            var r = _random.NextDouble();
-            if (r < legendaryProb) type = StarType.Legendary;
-            else if (r < legendaryProb + rareProb) type = StarType.Blue;
-            else type = StarType.Yellow;
-
-            var statH = type == StarType.Legendary ? h * 1.5 : h;
-            
-            BigDouble prodMult = 1;
-            if (type == StarType.Yellow || type == StarType.Legendary)
-            {
-                var w = MathHelper.NextGamma(2.0, statH / 40.0);
-                var value = Math.Max(1.5, Math.Pow(1.9, w));
-                prodMult = new BigDouble(value);
-            }
-
-            double cdReduction = 0;
-            if (type == StarType.Blue || type == StarType.Legendary)
-            {
-                var w = MathHelper.NextGamma(2.0, statH / 20.0) / 10.0;
-                cdReduction = Math.Max(-0.1, w);
-            }
-
-            int recycleValue = type switch
-            {
-                StarType.Yellow => 1,
-                StarType.Blue => 3,
-                StarType.Legendary => 20,
-                _ => 1
-            };
-
-            emptySlot.AddStar(new Star(type, prodMult, cdReduction, recycleValue));
+        var emptySlot = _starInventory.FirstOrDefault(s => !s.HasStar);
+        if (emptySlot != null)
+        {
+            emptySlot.AddStar(star);
             Changed?.Invoke();
         }
     }
@@ -266,19 +310,12 @@ public sealed class GameState
         if (IsVictory)
             return;
 
+        deltaSeconds *= GameSpeed;
         PlayTime += TimeSpan.FromSeconds(deltaSeconds);
-
-        _pendingUiUpdateSeconds += deltaSeconds;
-        var shouldRequestUiUpdate = _pendingUiUpdateSeconds >= UiUpdateIntervalSeconds;
-        if (shouldRequestUiUpdate)
-        {
-            _pendingUiUpdateSeconds = 0d;
-        }
 
         if ((FieldObjects.Count == 0 && SnowmanCount == 0) || deltaSeconds <= 0d)
         {
-            if (shouldRequestUiUpdate)
-                RequestUiUpdate?.Invoke();
+            RequestUiUpdate?.Invoke();
             return;
         }
 
@@ -287,13 +324,19 @@ public sealed class GameState
 
         var structureBuilt = new List<(int Type, BigDouble Amount)>();
 
+        // Cache context and commonly used stats
+        var ctx = new EvaluationContext();
+        var energyMult = EnergyMultiplier;
+        var iceMult = IceMultiplier;
+        var recycledStarsVal = ctx.Get(RecycledStars);
+        
         foreach (var fieldObject in FieldObjects)
         {
             var consumption = GetDynamicConsumption(fieldObject);
             var canProduce = true;
             foreach (var (resType, amount) in consumption)
             {
-                var currentAmount = GetResource(resType);
+                var currentAmount = _resources.GetResource(resType, ctx);
                 if (currentAmount < amount)
                 {
                     canProduce = false;
@@ -301,12 +344,12 @@ public sealed class GameState
                 }
             }
 
-            var completedCycles = fieldObject.Advance(deltaSeconds, canProduce);
+            var completedCycles = fieldObject.Advance(deltaSeconds, canProduce, ctx);
             if (completedCycles <= 0)
                 continue;
 
             OnResourceProduced?.Invoke(fieldObject, completedCycles);
-            var generatedValue = fieldObject.GetGeneratedValue(completedCycles);
+            var generatedValue = fieldObject.EvaluateValue(ctx) * completedCycles;
 
             // Consume resources if produced
             foreach (var (resType, amount) in consumption)
@@ -336,19 +379,27 @@ public sealed class GameState
 
             var multiplier = fieldObject.Type switch
             {
-                FieldNodeType.Snow => IceMultiplier,
-                FieldNodeType.Energy => EnergyMultiplier,
-                FieldNodeType.Recycler => EvaluateStat(RecycledStars),
-                FieldNodeType.DustBreaker => EvaluateStat(RecycledStars),
-                FieldNodeType.Farm => BigDouble.One,
+                FieldNodeType.Snow => iceMult,
+                FieldNodeType.Energy => energyMult,
+                FieldNodeType.Recycler => recycledStarsVal,
+                FieldNodeType.DustBreaker => recycledStarsVal,
                 _ => BigDouble.One
             };
 
             if (fieldObject.Type == FieldNodeType.Farm)
             {
                 generatedResources.TryAdd(producedType, BigDouble.Zero);
-
-                generatedResources[producedType] += generatedValue * GetFarmSeedCount(fieldObject);
+                var saplings = ctx.Get(Sapling);
+                var baseValue = fieldObject.OutputValue.BaseValue;
+                var currentWater = _resources.GetResource(ResourceType.Water, ctx);
+                
+                var totalW = BigDouble.Min(currentWater, saplings * baseValue * completedCycles);
+                
+                // Override consumed water for Farm
+                consumedResources[ResourceType.Water] = totalW;
+                
+                var outputValue = fieldObject.EvaluateValue(ctx);
+                generatedResources[producedType] += totalW * outputValue / baseValue;
             }
             else if (fieldObject.Type == FieldNodeType.Woodcutter)
             {
@@ -358,7 +409,7 @@ public sealed class GameState
             else if (fieldObject.Type == FieldNodeType.Bonfire)
             {
                 generatedResources.TryAdd(producedType, BigDouble.Zero);
-                generatedResources[producedType] += generatedValue * 30;
+                generatedResources[producedType] += generatedValue * 3000;
             }
             else
             {
@@ -389,8 +440,12 @@ public sealed class GameState
             _resources.AddResource(ResourceType.Carrot, SnowmanCarrotIncomePerSecond * deltaSeconds);
         }
 
-        if (shouldRequestUiUpdate)
+        Happiness.BaseValue = EvaluateHappiness();
+
+        _pendingUiUpdateSeconds += deltaSeconds;
+        if (_pendingUiUpdateSeconds >= MinUiUpdateInterval)
         {
+            _pendingUiUpdateSeconds = 0;
             RequestUiUpdate?.Invoke();
         }
     }
@@ -402,12 +457,19 @@ public sealed class GameState
         if (node.Type == FieldNodeType.Smelter)
         {
             var baseValue = node.OutputValue.BaseValue;
-            yield return (ResourceType.Energy, 10 * baseValue * beamInputMultiplier);
-            yield return (ResourceType.Ice, 10 * baseValue * beamInputMultiplier);
+            yield return (ResourceType.Energy, 10 * baseValue);
+            yield return (ResourceType.Ice, 10 * baseValue);
+        }
+        else if (node.Type == FieldNodeType.Farm)
+        {
+            // Water consumption for Farm is handled dynamically in Advance loop to allow for partial production if water is low.
+            // However, GetDynamicConsumption is used to check if ANY production can happen.
+            // We'll return the 'ideal' consumption here.
+            yield return (ResourceType.Water, EvaluateStat(Sapling) * node.OutputValue.BaseValue);
         }
         else
         {
-            // Note: FieldNodeType.Consumption() currently returns empty to avoid redundancy with this method.
+            // Note: FieldNodeType.Consumption() currently returns empty for some types to avoid redundancy with this method.
             foreach (var c in node.Type.Consumption())
                 yield return (c.Type, c.Amount * itemLevelMultiplier * beamInputMultiplier);
         }
@@ -421,29 +483,41 @@ public sealed class GameState
                 yield return (ResourceType.Wood, 100 * node.OutputValue.BaseValue * beamInputMultiplier);
                 break;
             case FieldNodeType.Bonfire:
-                yield return (ResourceType.Wood, 1 * node.OutputValue.BaseValue * beamInputMultiplier);
-                yield return (ResourceType.Energy, 10 * node.OutputValue.BaseValue * beamInputMultiplier);
-                break;
-            case FieldNodeType.Farm:
-                yield return (ResourceType.Water, GetFarmSeedCount(node) * node.OutputValue.BaseValue * beamInputMultiplier);
+                yield return (ResourceType.Wood, 10 * node.OutputValue.BaseValue * beamInputMultiplier);
+                yield return (ResourceType.Energy, 1000 * node.OutputValue.BaseValue * beamInputMultiplier);
                 break;
         }
     }
 
     public BigDouble GetDisplayedFactoryValue(FieldNode node)
-        => node.Type == FieldNodeType.Farm
-            ? node.EvaluateValue() * GetFarmSeedCount(node)
-            : node.EvaluateValue();
+    {
+        if (node.Type == FieldNodeType.Farm)
+        {
+            return BigDouble.Min(GetResource(ResourceType.Water), EvaluateStat(Sapling) * node.OutputValue.BaseValue) * node.EvaluateValue() / node.OutputValue.BaseValue;
+        }
+
+        var val = node.EvaluateValue();
+        return node.Type switch
+        {
+            FieldNodeType.Woodcutter => val * 10,
+            FieldNodeType.Bonfire => val * 3000,
+            _ => val
+        };
+    }
 
     public BigDouble GetDisplayedFactoryBaseValue(FieldNode node)
-        => node.Type == FieldNodeType.Farm
-            ? node.OutputValue.BaseValue
-            : node.OutputValue.BaseValue;
+    {
+        var val = node.OutputValue.BaseValue;
+        return node.Type switch
+        {
+            FieldNodeType.Woodcutter => val * 10,
+            FieldNodeType.Bonfire => val * 3000,
+            _ => val
+        };
+    }
 
     private BigDouble GetFarmSeedCount(FieldNode node)
-        => node.Type == FieldNodeType.Farm
-            ? EvaluateStat(Sapling)
-            : BigDouble.One;
+        => EvaluateStat(Sapling);
 
     public void ToggleFieldObjectLever(int fieldObjectId)
     {
@@ -783,6 +857,29 @@ public sealed class GameState
         RequestUiUpdate?.Invoke();
     }
 
+    public void SendLowestYellowStarToRecycler()
+    {
+        var recyclers = FieldObjects.Where(f => f.Type == FieldNodeType.Recycler).ToList();
+        if (recyclers.Count == 0) return;
+
+        var lowestYellowStarSlot = _starInventory
+            .Where(s => s.HasStar && s.Star!.Type == StarType.Yellow)
+            .OrderBy(s => s.Star!.ProductionMultiplier)
+            .FirstOrDefault();
+
+        if (lowestYellowStarSlot == null) return;
+
+        var randomRecycler = recyclers[Random.Shared.Next(recyclers.Count)];
+
+        var star = lowestYellowStarSlot.Star;
+        lowestYellowStarSlot.ConsumeStar();
+        randomRecycler.EnqueueRecycle();
+        RecycledStars.BaseValue += star?.RecycleValue ?? 1;
+
+        Changed?.Invoke();
+        RequestUiUpdate?.Invoke();
+    }
+
     public void SortStarInventoryByRarityAndMultiplier()
     {
         EndStarDrag();
@@ -1078,6 +1175,14 @@ public sealed class GameState
         inventorySlot.ConsumeStar();
         DraggingStarSlotIndex = null;
         ApplyPassiveStatStarModifiers();
+        
+        // If it's a happiness-related stat, we need to ensure UI knows about it
+        if (type == PassiveStatType.Happiness || type == PassiveStatType.Carrots || type == PassiveStatType.Houses || type == PassiveStatType.Flower)
+        {
+             // These affect EvaluateHappiness calculation
+             Happiness.BaseValue = EvaluateHappiness();
+        }
+        
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
         return true;
@@ -1091,8 +1196,21 @@ public sealed class GameState
             var multiplier = BigDouble.One;
             foreach (var s in stars)
             {
-                // For now keep the default behavior but we could use s.Star multipliers if needed
-                multiplier *= PassiveStarMultiplierPerStar;
+                var star = s.Star!;
+                var starBonus = star.ProductionMultiplier;
+                
+                // If it has cooldown reduction, give it a small bonus to production as well for passives
+                if (star.CooldownReduction > 0)
+                {
+                    starBonus *= (1.0 + star.CooldownReduction / 10.0);
+                }
+                
+                multiplier *= starBonus;
+            }
+
+            if (type == PassiveStatType.Stars)
+            {
+                multiplier = BigDouble.Max(BigDouble.One, Log2(multiplier + 1));
             }
 
             _passiveStatStarMultipliers[type] = multiplier;
@@ -1133,6 +1251,7 @@ public sealed class GameState
         var carrots = EvaluateStat(Carrot);
         var flowers = EvaluateStat(Flower);
         var houses = EvaluateStat(Houses);
+        
         return (carrots + 1) * (flowers + 1) * (houses + 1);
     }
     

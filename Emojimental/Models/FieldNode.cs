@@ -79,17 +79,35 @@ public sealed class FieldNode
 
     public Stat OutputValue { get; } = new() { BaseValue = 1 };
 
-    public double ProgressPercent => Math.Clamp(Progress * 100d, 0d, 100d);
-
-    public BigDouble EvaluateCooldown()
+    public double ProgressPercent
     {
-        _cachedCooldown ??= new EvaluationContext().Get(CooldownSeconds);
-        return _cachedCooldown.Value;
+        get
+        {
+            return Math.Clamp(Progress * 100d, 0d, 100d);
+        }
+    }
+
+    public string ProgressPercentDisplay() => _cachedProgressPercentDisplay;
+
+    private string _cachedProgressPercentDisplay = "0.000%";
+    private double _lastReportedProgress = -1;
+
+    public BigDouble EvaluateCooldown(EvaluationContext? ctx = null)
+    {
+        if (_cachedCooldown.HasValue)
+            return _cachedCooldown.Value;
+
+        var result = (ctx ?? new EvaluationContext()).Get(CooldownSeconds);
+        _cachedCooldown = result;
+        return result;
     }
 
     public string CooldownDisplay()
     {
-        _cachedCooldownDisplay ??= EvaluateCooldown().Display();
+        if (_cachedCooldownDisplay != null)
+            return _cachedCooldownDisplay;
+
+        _cachedCooldownDisplay = EvaluateCooldown().Display();
         return _cachedCooldownDisplay;
     }
 
@@ -106,15 +124,22 @@ public sealed class FieldNode
     public string BaseFlowerProbabilityDisplay()
         => $"{0:P0}";
 
-    public BigDouble EvaluateValue()
+    public BigDouble EvaluateValue(EvaluationContext? ctx = null)
     {
-        _cachedValue ??= new EvaluationContext().Get(OutputValue);
-        return _cachedValue.Value;
+        if (_cachedValue.HasValue)
+            return _cachedValue.Value;
+
+        var result = (ctx ?? new EvaluationContext()).Get(OutputValue);
+        _cachedValue = result;
+        return result;
     }
 
     public string ValueDisplay()
     {
-        _cachedValueDisplay ??= EvaluateValue().Display();
+        if (_cachedValueDisplay != null)
+            return _cachedValueDisplay;
+
+        _cachedValueDisplay = EvaluateValue().Display();
         return _cachedValueDisplay;
     }
 
@@ -170,6 +195,8 @@ public sealed class FieldNode
         _cachedCooldownDisplay = null;
         _cachedValue = null;
         _cachedValueDisplay = null;
+        _cachedProgressPercentDisplay = ProgressPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "%";
+        _lastReportedProgress = Progress;
     }
 
     public BigDouble GetItemUpgradeCost()
@@ -187,7 +214,7 @@ public sealed class FieldNode
     public bool IsPaused { get; private set; }
     public bool IsActive { get; private set; } = true;
 
-    internal int Advance(double deltaSeconds, bool canProduce = true)
+    internal int Advance(double deltaSeconds, bool canProduce = true, EvaluationContext? ctx = null)
     {
         if (IsPaused)
         {
@@ -205,11 +232,17 @@ public sealed class FieldNode
             return 0;
         }
 
-        var cooldownSeconds = EvaluateCooldown().ToDouble();
+        var cooldownSeconds = EvaluateCooldown(ctx).ToDouble();
         if (double.IsNaN(cooldownSeconds) || double.IsInfinity(cooldownSeconds) || cooldownSeconds <= 0d)
             cooldownSeconds = MinCooldownSeconds;
 
         Progress += deltaSeconds / cooldownSeconds;
+
+        if (Math.Abs(Progress - _lastReportedProgress) > 0.00001)
+        {
+            _cachedProgressPercentDisplay = ProgressPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "%";
+            _lastReportedProgress = Progress;
+        }
 
         var completedCycles = 0;
         if (Progress >= 1d)
