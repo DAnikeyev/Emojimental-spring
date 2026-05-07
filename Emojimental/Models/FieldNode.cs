@@ -55,6 +55,8 @@ public sealed class FieldNode
 
     public long PositionVersion { get; private set; }
 
+    public long StateVersion { get; private set; }
+
     public double Progress { get; private set; }
 
     public int Level => ItemLevel + TimeLevel - 1;
@@ -205,6 +207,7 @@ public sealed class FieldNode
         _cachedValueDisplay = null;
         _cachedProgressPercentDisplay = ProgressPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "%";
         _lastReportedProgress = Progress;
+        StateVersion++;
     }
 
     public BigDouble GetItemUpgradeCost()
@@ -281,6 +284,7 @@ public sealed class FieldNode
     {
         if (Type != FieldNodeType.Recycler) return;
         RecycleQueue++;
+        StateVersion++;
     }
 
     public BigDouble GetGeneratedValue(int completedCycles)
@@ -293,11 +297,13 @@ public sealed class FieldNode
     internal void ToggleBuilderLever()
     {
         BuilderLever = (BuilderLever + 1) % 2;
+        StateVersion++;
     }
 
     internal void TogglePause()
     {
         IsPaused = !IsPaused;
+        StateVersion++;
     }
 
     public void UpgradeItem()

@@ -214,6 +214,7 @@ public sealed class GameState
     public IReadOnlyList<FieldNode> FieldObjects => _field.FieldObjects;
     public IReadOnlyList<AlignmentBeam> AlignmentBeams => _field.AlignmentBeams;
     public IReadOnlyList<BeamStarSlot> BeamStarSlots => _field.BeamStarSlots;
+    public BeamStarSlot? GetBeamStarSlot(int sourceFieldNodeId, FieldNodeSide sourceSide) => _field.GetBeamStarSlot(sourceFieldNodeId, sourceSide);
     public IReadOnlyList<StarInventorySlot> StarInventory => _starInventory;
     public IReadOnlyCollection<ResearchType> OwnedResearch => _research.OwnedResearch;
     public IReadOnlyList<ResearchDefinition> Researches => ResearchCatalog.All;
@@ -573,14 +574,14 @@ public sealed class GameState
 
     public void ToggleFieldObjectLever(int fieldObjectId)
     {
-        var fieldObject = FieldObjects.FirstOrDefault(f => f.Id == fieldObjectId);
+        var fieldObject = _field.GetFieldObject(fieldObjectId);
         fieldObject?.ToggleBuilderLever();
         RequestUiUpdate?.Invoke();
     }
 
     public void ToggleFieldObjectPause(int fieldObjectId)
     {
-        var fieldObject = FieldObjects.FirstOrDefault(f => f.Id == fieldObjectId);
+        var fieldObject = _field.GetFieldObject(fieldObjectId);
         fieldObject?.TogglePause();
         RequestUiUpdate?.Invoke();
     }
@@ -588,6 +589,7 @@ public sealed class GameState
     public void AddFieldObject(FieldNodeType type = FieldNodeType.Energy)
     {
         type = type.Normalize();
+        if (FieldObjects.Count >= 24) return;
         var count = CountFieldObjects(type);
         if ((type is FieldNodeType.Energy or FieldNodeType.Snow) && count >= 3) return;
         if (type == FieldNodeType.Researcher && count >= 1) return;
@@ -603,9 +605,10 @@ public sealed class GameState
         if (GetResource(costResource) < cost) return;
 
         _resources.AddResource(costResource, -cost);
-        _field.AddFieldObject(type);
-        ApplyTemperatureModifiers();
-        ApplyBeamStarModifiers();
+        var affectedTargetFieldNodeIds = _field.AddFieldObject(type);
+        if (SelectedFieldObject is not null)
+            ApplyTemperatureModifiers(SelectedFieldObject);
+        ApplyBeamStarModifiers(affectedTargetFieldNodeIds);
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
@@ -624,8 +627,7 @@ public sealed class GameState
     public void RemoveFieldObject(FieldNodeType type)
     {
         type = type.Normalize();
-        _field.RemoveFieldObject(type);
-        ApplyBeamStarModifiers();
+        ApplyBeamStarModifiers(_field.RemoveFieldObject(type));
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
@@ -648,7 +650,7 @@ public sealed class GameState
 
     public void SetFieldNodeHeld(int fieldObjectId, bool isHeld)
     {
-        var node = _field.FieldObjects.FirstOrDefault(n => n.Id == fieldObjectId);
+        var node = _field.GetFieldObject(fieldObjectId);
         node?.SetHeld(isHeld);
         RequestUiUpdate?.Invoke();
     }
@@ -864,8 +866,9 @@ public sealed class GameState
 
     public void SetFieldSize(double width, double height)
     {
-        _field.SetFieldSize(width, height);
-        ApplyBeamStarModifiers();
+        if (!_field.SetFieldSize(width, height))
+            return;
+
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
@@ -978,13 +981,15 @@ public sealed class GameState
     }
 
     public bool CanPlaceStar(int sourceFieldNodeId, FieldNodeSide sourceSide)
-        => DraggingStarSlotIndex is not null && BeamStarSlots.Any(slot =>
-            slot.SourceFieldNodeId == sourceFieldNodeId &&
-            slot.SourceSide == sourceSide);
+        => DraggingStarSlotIndex is not null && _field.HasBeamStarSlot(sourceFieldNodeId, sourceSide);
 
     public bool TryPlaceStar(int sourceFieldNodeId, FieldNodeSide sourceSide)
     {
         if (DraggingStarSlotIndex is null)
+            return false;
+
+        var beamStarSlot = _field.GetBeamStarSlot(sourceFieldNodeId, sourceSide);
+        if (beamStarSlot is null)
             return false;
 
         var inventorySlot = _starInventory[DraggingStarSlotIndex.Value];
@@ -1000,7 +1005,7 @@ public sealed class GameState
 
         inventorySlot.ConsumeStar();
         DraggingStarSlotIndex = null;
-        ApplyBeamStarModifiers();
+        ApplyBeamStarModifiers(beamStarSlot.TargetFieldNodeId);
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
         return true;
@@ -1011,7 +1016,7 @@ public sealed class GameState
         if (DraggingStarSlotIndex is null)
             return false;
 
-        var fieldNode = FieldObjects.FirstOrDefault(n => n.Id == recyclerFieldNodeId);
+        var fieldNode = _field.GetFieldObject(recyclerFieldNodeId);
         if (fieldNode == null || fieldNode.Type != FieldNodeType.Recycler)
             return false;
 
@@ -1036,17 +1041,23 @@ public sealed class GameState
     public void EndFieldObjectDrag(int fieldObjectId) { }
     public void MoveFieldObject(int fieldObjectId, double x, double y)
     {
-        if (!_field.MoveFieldObject(fieldObjectId, x, y))
+        var fieldObject = _field.GetFieldObject(fieldObjectId);
+        if (fieldObject is null)
             return;
 
-        ApplyBeamStarModifiers();
+        var previousX = fieldObject.X;
+        var previousY = fieldObject.Y;
+        var affectedTargetFieldNodeIds = _field.MoveFieldObject(fieldObjectId, x, y);
+        if (Math.Abs(fieldObject.X - previousX) < 0.1d && Math.Abs(fieldObject.Y - previousY) < 0.1d)
+            return;
+
+        ApplyBeamStarModifiers(affectedTargetFieldNodeIds);
         RequestUiUpdate?.Invoke();
     }
 
     public void RefreshConnections()
     {
-        _field.RefreshConnections();
-        ApplyBeamStarModifiers();
+        ApplyBeamStarModifiers(_field.RefreshConnections());
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
@@ -1162,18 +1173,21 @@ public sealed class GameState
     private void ApplyTemperatureModifiers()
     {
         foreach (var fieldObject in FieldObjects)
-        {
-            var valueMultiplier = fieldObject.Type switch
-            {
-                FieldNodeType.Snow => SnowTemperatureMultiplier,
-                FieldNodeType.Energy => EnergyTemperatureMultiplier,
-                FieldNodeType.Smelter => WaterTemperatureMultiplier,
-                _ => BigDouble.One
-            };
+            ApplyTemperatureModifiers(fieldObject);
+    }
 
-            fieldObject.SetTemperatureValueMultiplier(valueMultiplier);
-            fieldObject.SetTemperatureCooldownMultiplier(BigDouble.One);
-        }
+    private void ApplyTemperatureModifiers(FieldNode fieldObject)
+    {
+        var valueMultiplier = fieldObject.Type switch
+        {
+            FieldNodeType.Snow => SnowTemperatureMultiplier,
+            FieldNodeType.Energy => EnergyTemperatureMultiplier,
+            FieldNodeType.Smelter => WaterTemperatureMultiplier,
+            _ => BigDouble.One
+        };
+
+        fieldObject.SetTemperatureValueMultiplier(valueMultiplier);
+        fieldObject.SetTemperatureCooldownMultiplier(BigDouble.One);
     }
 
     private void ApplyBeamStarModifiers()
@@ -1189,6 +1203,42 @@ public sealed class GameState
                 var star = slot.Star!;
                 productionMultiplier *= star.ProductionMultiplier;
                 cooldownReduction += star.CooldownReduction;
+            }
+
+            fieldObject.SetBeamValueMultiplier(productionMultiplier);
+            fieldObject.SetBeamCooldownReduction(cooldownReduction);
+        }
+    }
+
+    private void ApplyBeamStarModifiers(int? affectedTargetFieldNodeId)
+    {
+        if (affectedTargetFieldNodeId is not int fieldNodeId)
+            return;
+
+        ApplyBeamStarModifiers([fieldNodeId]);
+    }
+
+    private void ApplyBeamStarModifiers(IReadOnlyCollection<int> affectedTargetFieldNodeIds)
+    {
+        if (affectedTargetFieldNodeIds.Count == 0)
+            return;
+
+        foreach (var fieldNodeId in affectedTargetFieldNodeIds)
+        {
+            var fieldObject = _field.GetFieldObject(fieldNodeId);
+            if (fieldObject is null)
+                continue;
+
+            var productionMultiplier = BigDouble.One;
+            var cooldownReduction = BigDouble.Zero;
+
+            foreach (var slot in BeamStarSlots)
+            {
+                if (slot.TargetFieldNodeId != fieldNodeId || slot.Star is null)
+                    continue;
+
+                productionMultiplier *= slot.Star.ProductionMultiplier;
+                cooldownReduction += slot.Star.CooldownReduction;
             }
 
             fieldObject.SetBeamValueMultiplier(productionMultiplier);

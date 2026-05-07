@@ -17,12 +17,14 @@ public sealed class FieldState
     private const int MaxObjects = GridColumns * GridRows;
     private const double ZoneGap = 32d;
     private const double GridPadding = 24d;
-
     private const double BeamThickness = 8d;
 
     private readonly List<FieldNode> _fieldObjects = new();
+    private readonly Dictionary<int, FieldNode> _fieldObjectsById = new();
+    private readonly Dictionary<int, FieldNode> _fieldObjectsByZoneIndex = new();
     private readonly List<AlignmentBeam> _alignmentBeams = new();
     private readonly List<BeamStarSlot> _beamStarSlots = new();
+    private readonly Dictionary<(int SourceFieldNodeId, FieldNodeSide SourceSide), int> _beamStarSlotIndices = new();
     private int _nextFieldObjectId = 1;
 
     public double FieldWidth => (FieldNode.Size * GridColumns) + (ZoneGap * (GridColumns - 1)) + (GridPadding * 2d);
@@ -33,34 +35,60 @@ public sealed class FieldState
     public IReadOnlyList<BeamStarSlot> BeamStarSlots => _beamStarSlots;
     public FieldNode? SelectedFieldObject { get; private set; }
 
-    public void AddFieldObject(FieldNodeType type)
+    public FieldNode? GetFieldObject(int fieldNodeId)
+        => _fieldObjectsById.TryGetValue(fieldNodeId, out var fieldObject) ? fieldObject : null;
+
+    public BeamStarSlot? GetBeamStarSlot(int sourceFieldNodeId, FieldNodeSide sourceSide)
+        => _beamStarSlotIndices.TryGetValue((sourceFieldNodeId, sourceSide), out var slotIndex)
+            ? _beamStarSlots[slotIndex]
+            : null;
+
+    public bool HasBeamStarSlot(int sourceFieldNodeId, FieldNodeSide sourceSide)
+        => _beamStarSlotIndices.ContainsKey((sourceFieldNodeId, sourceSide));
+
+    public IReadOnlyCollection<int> AddFieldObject(FieldNodeType type)
     {
         if (_fieldObjects.Count >= MaxObjects)
-            return;
+            return Array.Empty<int>();
 
         var zoneIndex = FindFirstEmptyZone();
         if (zoneIndex == -1)
-            return;
+            return Array.Empty<int>();
 
         var (x, y) = GetZonePosition(zoneIndex);
         var fieldObject = new FieldNode(_nextFieldObjectId++, type, x, y);
         _fieldObjects.Add(fieldObject);
+        _fieldObjectsById[fieldObject.Id] = fieldObject;
+        _fieldObjectsByZoneIndex[zoneIndex] = fieldObject;
         AddPersistentBeamStarSlots(fieldObject.Id);
         SelectedFieldObject = fieldObject;
-        RefreshConnections();
+        return RefreshConnections();
     }
 
-    public void RemoveFieldObject(FieldNodeType type)
+    public IReadOnlyCollection<int> RemoveFieldObject(FieldNodeType type)
     {
         var removed = _fieldObjects.LastOrDefault(fieldObject => fieldObject.Type == type);
         if (removed is null)
-            return;
+            return Array.Empty<int>();
+
+        var affectedTargetFieldNodeIds = _beamStarSlots
+            .Where(slot => slot.SourceFieldNodeId == removed.Id && slot.Star != null && slot.TargetFieldNodeId != null)
+            .Select(slot => slot.TargetFieldNodeId!.Value)
+            .ToHashSet();
 
         _fieldObjects.Remove(removed);
+        _fieldObjectsById.Remove(removed.Id);
+        _fieldObjectsByZoneIndex.Remove(GetZoneIndex(removed));
         _beamStarSlots.RemoveAll(slot => slot.SourceFieldNodeId == removed.Id);
+        RebuildBeamStarSlotIndices();
+
         if (SelectedFieldObject?.Id == removed.Id)
             SelectedFieldObject = _fieldObjects.Count > 0 ? _fieldObjects[^1] : null;
-        RefreshConnections();
+
+        foreach (var fieldNodeId in RefreshConnections())
+            affectedTargetFieldNodeIds.Add(fieldNodeId);
+
+        return affectedTargetFieldNodeIds.Count == 0 ? Array.Empty<int>() : affectedTargetFieldNodeIds;
     }
 
     public void SelectFieldObject(int? fieldObjectId)
@@ -71,73 +99,124 @@ public sealed class FieldState
             return;
         }
 
-        var fieldObject = _fieldObjects.FirstOrDefault(candidate => candidate.Id == fieldObjectId.Value);
+        var fieldObject = GetFieldObject(fieldObjectId.Value);
         if (fieldObject is null || SelectedFieldObject?.Id == fieldObject.Id)
             return;
 
         SelectedFieldObject = fieldObject;
     }
 
-    public void SetFieldSize(double width, double height)
-    {
-        // Grid size is fixed, so we don't need to change FieldWidth/FieldHeight.
-        // But we should refresh connections if needed, though they don't depend on surface size anymore.
-        RefreshConnections();
-    }
+    public bool SetFieldSize(double width, double height)
+        => false;
 
     public void BeginFieldObjectDrag(int fieldObjectId)
     {
-        // No special drag context needed for grid snapping
     }
 
     public void EndFieldObjectDrag(int fieldObjectId)
     {
     }
 
-    public bool MoveFieldObject(int fieldObjectId, double x, double y)
+    public IReadOnlyCollection<int> MoveFieldObject(int fieldObjectId, double x, double y)
     {
-        var fieldObject = _fieldObjects.FirstOrDefault(candidate => candidate.Id == fieldObjectId);
-        if (fieldObject is null)
-            return false;
+        if (!_fieldObjectsById.TryGetValue(fieldObjectId, out var fieldObject))
+            return Array.Empty<int>();
 
-        var zoneIndex = GetZoneIndexFromPosition(x + FieldNode.Size / 2d, y + FieldNode.Size / 2d);
-        var (targetX, targetY) = GetZonePosition(zoneIndex);
+        var targetZoneIndex = GetZoneIndexFromPosition(x + FieldNode.Size / 2d, y + FieldNode.Size / 2d);
+        var currentZoneIndex = GetZoneIndex(fieldObject);
+        if (targetZoneIndex == currentZoneIndex)
+            return Array.Empty<int>();
 
-        if (_fieldObjects.Any(candidate => candidate.Id != fieldObjectId && Math.Abs(candidate.X - targetX) < 0.1d && Math.Abs(candidate.Y - targetY) < 0.1d))
-            return false;
+        if (_fieldObjectsByZoneIndex.TryGetValue(targetZoneIndex, out var occupiedFieldObject)
+            && occupiedFieldObject.Id != fieldObjectId)
+        {
+            return Array.Empty<int>();
+        }
 
-        if (Math.Abs(fieldObject.X - targetX) < 0.1d && Math.Abs(fieldObject.Y - targetY) < 0.1d)
-            return false;
-
+        var (targetX, targetY) = GetZonePosition(targetZoneIndex);
+        _fieldObjectsByZoneIndex.Remove(currentZoneIndex);
+        _fieldObjectsByZoneIndex[targetZoneIndex] = fieldObject;
         fieldObject.SetPosition(targetX, targetY);
-        RefreshConnections();
-        return true;
+        return RefreshConnections();
     }
 
-    public void RefreshConnections()
+    public IReadOnlyCollection<int> RefreshConnections()
     {
+        var previousStarredTargets = new Dictionary<int, int?>();
+        for (var index = 0; index < _beamStarSlots.Count; index++)
+        {
+            if (_beamStarSlots[index].Star != null)
+                previousStarredTargets[index] = _beamStarSlots[index].TargetFieldNodeId;
+        }
+
         _alignmentBeams.Clear();
         for (var index = 0; index < _beamStarSlots.Count; index++)
-            _beamStarSlots[index] = _beamStarSlots[index] with { TargetFieldNodeId = null, TargetSide = null };
+        {
+            var slot = _beamStarSlots[index];
+            if (slot.TargetFieldNodeId == null && slot.TargetSide == null)
+                continue;
+
+            _beamStarSlots[index] = slot with { TargetFieldNodeId = null, TargetSide = null };
+        }
 
         foreach (var fieldObject in _fieldObjects)
             fieldObject.SetConnectionCount(0);
 
-        foreach (var row in _fieldObjects.GroupBy(fieldObject => Math.Round(fieldObject.Y, 3)))
-            ConnectAdjacent(row.OrderBy(fieldObject => fieldObject.X).ToList(), isHorizontal: true);
+        for (var row = 0; row < GridRows; row++)
+        {
+            FieldNode? previous = null;
+            for (var col = 0; col < GridColumns; col++)
+            {
+                if (!_fieldObjectsByZoneIndex.TryGetValue((row * GridColumns) + col, out var current))
+                    continue;
 
-        foreach (var column in _fieldObjects.GroupBy(fieldObject => Math.Round(fieldObject.X, 3)))
-            ConnectAdjacent(column.OrderBy(fieldObject => fieldObject.Y).ToList(), isHorizontal: false);
+                if (previous is not null)
+                    ConnectAdjacent(previous, current, isHorizontal: true);
+
+                previous = current;
+            }
+        }
+
+        for (var col = 0; col < GridColumns; col++)
+        {
+            FieldNode? previous = null;
+            for (var row = 0; row < GridRows; row++)
+            {
+                if (!_fieldObjectsByZoneIndex.TryGetValue((row * GridColumns) + col, out var current))
+                    continue;
+
+                if (previous is not null)
+                    ConnectAdjacent(previous, current, isHorizontal: false);
+
+                previous = current;
+            }
+        }
+
+        var affectedTargetFieldNodeIds = new HashSet<int>();
+        foreach (var (slotIndex, previousTargetFieldNodeId) in previousStarredTargets)
+        {
+            var currentTargetFieldNodeId = _beamStarSlots[slotIndex].TargetFieldNodeId;
+            if (previousTargetFieldNodeId == currentTargetFieldNodeId)
+                continue;
+
+            if (previousTargetFieldNodeId is int previousTarget)
+                affectedTargetFieldNodeIds.Add(previousTarget);
+
+            if (currentTargetFieldNodeId is int currentTarget)
+                affectedTargetFieldNodeIds.Add(currentTarget);
+        }
+
+        return affectedTargetFieldNodeIds.Count == 0 ? Array.Empty<int>() : affectedTargetFieldNodeIds;
     }
 
     private int FindFirstEmptyZone()
     {
         for (var i = 0; i < MaxObjects; i++)
         {
-            var (x, y) = GetZonePosition(i);
-            if (!_fieldObjects.Any(candidate => Math.Abs(candidate.X - x) < 0.1d && Math.Abs(candidate.Y - y) < 0.1d))
+            if (!_fieldObjectsByZoneIndex.ContainsKey(i))
                 return i;
         }
+
         return -1;
     }
 
@@ -163,71 +242,62 @@ public sealed class FieldState
         return (x, y);
     }
 
-    private void ConnectAdjacent(
-        IReadOnlyList<FieldNode> group,
-        bool isHorizontal)
+    private void ConnectAdjacent(FieldNode first, FieldNode second, bool isHorizontal)
     {
-        for (var index = 0; index < group.Count - 1; index++)
+        if (isHorizontal)
         {
-            var first = group[index];
-            var second = group[index + 1];
+            var left = first.X <= second.X ? first : second;
+            var right = ReferenceEquals(left, first) ? second : first;
+            var beamLeft = left.X + FieldNode.Size;
+            var beamWidth = right.X - beamLeft;
+            if (beamWidth <= 0d)
+                return;
 
-            if (isHorizontal)
-            {
-                var left = first.X <= second.X ? first : second;
-                var right = ReferenceEquals(left, first) ? second : first;
-                var beamLeft = left.X + FieldNode.Size;
-                var beamWidth = right.X - beamLeft;
-                if (beamWidth <= 0d)
-                    continue;
+            _alignmentBeams.Add(new AlignmentBeam(
+                true,
+                beamLeft,
+                ((left.Y + right.Y) / 2d) + FieldNode.Size / 2d - BeamThickness / 2d,
+                beamWidth,
+                BeamThickness,
+                left.Id,
+                right.Id,
+                FieldNodeSide.Right,
+                FieldNodeSide.Left));
 
-                _alignmentBeams.Add(new AlignmentBeam(
-                    true,
-                    beamLeft,
-                    ((left.Y + right.Y) / 2d) + FieldNode.Size / 2d - BeamThickness / 2d,
-                    beamWidth,
-                    BeamThickness,
-                    left.Id,
-                    right.Id,
-                    FieldNodeSide.Right,
-                    FieldNodeSide.Left));
-
-                SetBeamStarTarget(left.Id, FieldNodeSide.Right, right.Id, FieldNodeSide.Left);
-                SetBeamStarTarget(right.Id, FieldNodeSide.Left, left.Id, FieldNodeSide.Right);
-            }
-            else
-            {
-                var top = first.Y <= second.Y ? first : second;
-                var bottom = ReferenceEquals(top, first) ? second : first;
-                var beamTop = top.Y + FieldNode.Size;
-                var beamHeight = bottom.Y - beamTop;
-                if (beamHeight <= 0d)
-                    continue;
-
-                _alignmentBeams.Add(new AlignmentBeam(
-                    false,
-                    ((top.X + bottom.X) / 2d) + FieldNode.Size / 2d - BeamThickness / 2d,
-                    beamTop,
-                    BeamThickness,
-                    beamHeight,
-                    top.Id,
-                    bottom.Id,
-                    FieldNodeSide.Bottom,
-                    FieldNodeSide.Top));
-
-                SetBeamStarTarget(top.Id, FieldNodeSide.Bottom, bottom.Id, FieldNodeSide.Top);
-                SetBeamStarTarget(bottom.Id, FieldNodeSide.Top, top.Id, FieldNodeSide.Bottom);
-            }
-
-            first.SetConnectionCount(first.ConnectionCount + 1);
-            second.SetConnectionCount(second.ConnectionCount + 1);
+            SetBeamStarTarget(left.Id, FieldNodeSide.Right, right.Id, FieldNodeSide.Left);
+            SetBeamStarTarget(right.Id, FieldNodeSide.Left, left.Id, FieldNodeSide.Right);
         }
+        else
+        {
+            var top = first.Y <= second.Y ? first : second;
+            var bottom = ReferenceEquals(top, first) ? second : first;
+            var beamTop = top.Y + FieldNode.Size;
+            var beamHeight = bottom.Y - beamTop;
+            if (beamHeight <= 0d)
+                return;
+
+            _alignmentBeams.Add(new AlignmentBeam(
+                false,
+                ((top.X + bottom.X) / 2d) + FieldNode.Size / 2d - BeamThickness / 2d,
+                beamTop,
+                BeamThickness,
+                beamHeight,
+                top.Id,
+                bottom.Id,
+                FieldNodeSide.Bottom,
+                FieldNodeSide.Top));
+
+            SetBeamStarTarget(top.Id, FieldNodeSide.Bottom, bottom.Id, FieldNodeSide.Top);
+            SetBeamStarTarget(bottom.Id, FieldNodeSide.Top, top.Id, FieldNodeSide.Bottom);
+        }
+
+        first.SetConnectionCount(first.ConnectionCount + 1);
+        second.SetConnectionCount(second.ConnectionCount + 1);
     }
 
     public bool TryPlaceStar(int sourceFieldNodeId, FieldNodeSide sourceSide, Star star)
     {
-        var slotIndex = _beamStarSlots.FindIndex(slot => slot.SourceFieldNodeId == sourceFieldNodeId && slot.SourceSide == sourceSide);
-        if (slotIndex < 0)
+        if (!_beamStarSlotIndices.TryGetValue((sourceFieldNodeId, sourceSide), out var slotIndex))
             return false;
 
         _beamStarSlots[slotIndex] = _beamStarSlots[slotIndex] with { Star = star };
@@ -237,13 +307,15 @@ public sealed class FieldState
     private void AddPersistentBeamStarSlots(int fieldNodeId)
     {
         foreach (var side in AllSides)
+        {
             _beamStarSlots.Add(new BeamStarSlot(fieldNodeId, side));
+            _beamStarSlotIndices[(fieldNodeId, side)] = _beamStarSlots.Count - 1;
+        }
     }
 
     private void SetBeamStarTarget(int sourceFieldNodeId, FieldNodeSide sourceSide, int targetFieldNodeId, FieldNodeSide targetSide)
     {
-        var slotIndex = _beamStarSlots.FindIndex(slot => slot.SourceFieldNodeId == sourceFieldNodeId && slot.SourceSide == sourceSide);
-        if (slotIndex < 0)
+        if (!_beamStarSlotIndices.TryGetValue((sourceFieldNodeId, sourceSide), out var slotIndex))
             return;
 
         _beamStarSlots[slotIndex] = _beamStarSlots[slotIndex] with
@@ -253,16 +325,16 @@ public sealed class FieldState
         };
     }
 
-    private double ClampX(double value)
-        => Math.Clamp(value, GridPadding, FieldWidth - FieldNode.Size - GridPadding);
-
-    private double ClampY(double value)
-        => Math.Clamp(value, GridPadding, FieldHeight - FieldNode.Size - GridPadding);
-
-    private static bool Intersects(double firstX, double firstY, double secondX, double secondY)
+    private void RebuildBeamStarSlotIndices()
     {
-        var overlapsX = firstX < secondX + FieldNode.Size - 0.1d && firstX + FieldNode.Size > secondX + 0.1d;
-        var overlapsY = firstY < secondY + FieldNode.Size - 0.1d && firstY + FieldNode.Size > secondY + 0.1d;
-        return overlapsX && overlapsY;
+        _beamStarSlotIndices.Clear();
+        for (var index = 0; index < _beamStarSlots.Count; index++)
+        {
+            var slot = _beamStarSlots[index];
+            _beamStarSlotIndices[(slot.SourceFieldNodeId, slot.SourceSide)] = index;
+        }
     }
+
+    private int GetZoneIndex(FieldNode fieldNode)
+        => GetZoneIndexFromPosition(fieldNode.X + FieldNode.Size / 2d, fieldNode.Y + FieldNode.Size / 2d);
 }

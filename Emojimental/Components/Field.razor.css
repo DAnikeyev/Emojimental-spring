@@ -118,10 +118,197 @@
     border-radius: 999px;
     background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 20%, transparent), var(--theme-accent), color-mix(in srgb, var(--theme-accent) 20%, transparent));
     box-shadow: 0 0 14px color-mix(in srgb, var(--theme-accent) 55%, transparent);
+    overflow: hidden;
 }
 
 .field-beam--vertical {
     background: linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 20%, transparent), var(--theme-accent), color-mix(in srgb, var(--theme-accent) 20%, transparent));
+}
+
+.field-beam--starred {
+    background:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 245, 191, 0.5) 18%,
+            rgba(255, 223, 122, 0.95) 50%,
+            rgba(255, 245, 191, 0.5) 82%,
+            rgba(255, 255, 255, 0) 100%);
+    box-shadow:
+        0 0 10px rgba(255, 223, 122, 0.55),
+        0 0 24px rgba(255, 200, 84, 0.42),
+        0 0 40px rgba(255, 200, 84, 0.22);
+    animation: field-beam-starred-pulse 1.6s ease-in-out infinite alternate;
+}
+
+.field-beam--vertical.field-beam--starred {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 245, 191, 0.5) 18%,
+            rgba(255, 223, 122, 0.95) 50%,
+            rgba(255, 245, 191, 0.5) 82%,
+            rgba(255, 255, 255, 0) 100%);
+}
+
+.field-beam--starred::before,
+.field-beam--starred::after {
+    content: "";
+    position: absolute;
+    inset: -60%;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.field-beam--starred::before {
+    background:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 25%,
+            rgba(255, 255, 255, 0.9) 50%,
+            rgba(255, 255, 255, 0.1) 75%,
+            rgba(255, 255, 255, 0) 100%);
+    animation: field-beam-starred-flow 1.3s linear infinite;
+    mix-blend-mode: screen;
+}
+
+.field-beam--vertical.field-beam--starred::before {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 25%,
+            rgba(255, 255, 255, 0.9) 50%,
+            rgba(255, 255, 255, 0.1) 75%,
+            rgba(255, 255, 255, 0) 100%);
+}
+
+.field-beam--starred::after {
+    background:
+        radial-gradient(circle at 24% 50%, rgba(255, 255, 255, 0.95) 0 3%, rgba(255, 255, 255, 0) 8%),
+        radial-gradient(circle at 56% 50%, rgba(255, 247, 214, 0.75) 0 2.5%, rgba(255, 255, 255, 0) 7%),
+        radial-gradient(circle at 82% 50%, rgba(255, 255, 255, 0.85) 0 2.5%, rgba(255, 255, 255, 0) 7%);
+    animation: field-beam-starred-sparkle 1.8s ease-in-out infinite;
+    opacity: 0.9;
+}
+
+.field-beam--vertical.field-beam--starred::after {
+    background:
+        radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.95) 0 3%, rgba(255, 255, 255, 0) 8%),
+        radial-gradient(circle at 50% 56%, rgba(255, 247, 214, 0.75) 0 2.5%, rgba(255, 255, 255, 0) 7%),
+        radial-gradient(circle at 50% 82%, rgba(255, 255, 255, 0.85) 0 2.5%, rgba(255, 255, 255, 0) 7%);
+}
+
+.field-beam--rare.field-beam--starred {
+    background:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(196, 223, 255, 0.5) 18%,
+            rgba(99, 179, 255, 0.95) 50%,
+            rgba(196, 223, 255, 0.5) 82%,
+            rgba(255, 255, 255, 0) 100%);
+    box-shadow:
+        0 0 10px rgba(99, 179, 255, 0.55),
+        0 0 24px rgba(72, 152, 255, 0.4),
+        0 0 40px rgba(72, 152, 255, 0.2);
+}
+
+.field-beam--rare.field-beam--starred.field-beam--vertical {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(196, 223, 255, 0.5) 18%,
+            rgba(99, 179, 255, 0.95) 50%,
+            rgba(196, 223, 255, 0.5) 82%,
+            rgba(255, 255, 255, 0) 100%);
+}
+
+.field-beam--legendary.field-beam--starred {
+    background:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 218, 142, 0.6) 16%,
+            rgba(255, 160, 71, 0.98) 50%,
+            rgba(255, 218, 142, 0.6) 84%,
+            rgba(255, 255, 255, 0) 100%);
+    box-shadow:
+        0 0 12px rgba(255, 173, 82, 0.65),
+        0 0 28px rgba(255, 139, 61, 0.5),
+        0 0 46px rgba(255, 139, 61, 0.28);
+}
+
+.field-beam--legendary.field-beam--starred.field-beam--vertical {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 218, 142, 0.6) 16%,
+            rgba(255, 160, 71, 0.98) 50%,
+            rgba(255, 218, 142, 0.6) 84%,
+            rgba(255, 255, 255, 0) 100%);
+}
+
+@keyframes field-beam-starred-flow {
+    from {
+        transform: translateX(-45%);
+        opacity: 0.35;
+    }
+
+    45% {
+        opacity: 0.95;
+    }
+
+    to {
+        transform: translateX(45%);
+        opacity: 0.35;
+    }
+}
+
+.field-beam--vertical.field-beam--starred::before {
+    animation-name: field-beam-starred-flow-vertical;
+}
+
+@keyframes field-beam-starred-flow-vertical {
+    from {
+        transform: translateY(-45%);
+        opacity: 0.35;
+    }
+
+    45% {
+        opacity: 0.95;
+    }
+
+    to {
+        transform: translateY(45%);
+        opacity: 0.35;
+    }
+}
+
+@keyframes field-beam-starred-pulse {
+    from {
+        opacity: 0.82;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes field-beam-starred-sparkle {
+    0%,
+    100% {
+        opacity: 0.2;
+        transform: scale(0.92);
+    }
+
+    35% {
+        opacity: 0.95;
+        transform: scale(1.06);
+    }
+
+    70% {
+        opacity: 0.55;
+        transform: scale(1);
+    }
 }
 
 .field-star-event {

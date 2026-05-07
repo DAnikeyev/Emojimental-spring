@@ -23,7 +23,7 @@
 
         @foreach (var beam in GameState.AlignmentBeams)
         {
-            <div class="field-beam @(beam.IsHorizontal ? "" : "field-beam--vertical")"
+            <div class="@GetBeamClasses(beam)"
                  style="left:@(beam.Left.ToString("F1", CultureInfo.InvariantCulture))px;top:@(beam.Top.ToString("F1", CultureInfo.InvariantCulture))px;width:@(beam.Width.ToString("F1", CultureInfo.InvariantCulture))px;height:@(beam.Height.ToString("F1", CultureInfo.InvariantCulture))px;">
             </div>
         }
@@ -269,6 +269,23 @@
     private void OnBeamStarDrop(int sourceFieldNodeId, FieldNodeSide sourceSide, DragEventArgs _)
     {
         GameState.TryPlaceStar(sourceFieldNodeId, sourceSide);
+    }
+
+    private string GetBeamClasses(AlignmentBeam beam)
+    {
+        var orientationClass = beam.IsHorizontal ? string.Empty : " field-beam--vertical";
+        var slot = GameState.GetBeamStarSlot(beam.SourceFieldNodeId, beam.SourceSide);
+        if (slot?.HasStar != true)
+            return $"field-beam{orientationClass}";
+
+        var rarityClass = slot.Star?.Type switch
+        {
+            StarType.Legendary => " field-beam--legendary",
+            StarType.Blue => " field-beam--rare",
+            _ => string.Empty
+        };
+
+        return $"field-beam field-beam--starred{orientationClass}{rarityClass}";
     }
 
 

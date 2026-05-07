@@ -70,6 +70,12 @@
             @if (beamStarSlot.HasStar)
             {
                 <div class="field-node__star-shell">
+                    <div class="field-node__beam-slot-aura" aria-hidden="true"></div>
+                    <div class="field-node__beam-slot-sparkles" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
                     <button type="button"
                             class="field-node__star"
                             @onclick:stopPropagation="true"
@@ -92,6 +98,14 @@
 </div>
 
 @code {
+    private static readonly FieldNodeSide[] BeamSides =
+    [
+        FieldNodeSide.Left,
+        FieldNodeSide.Right,
+        FieldNodeSide.Top,
+        FieldNodeSide.Bottom
+    ];
+
     [Parameter, EditorRequired] public FieldNode Node { get; set; } = null!;
     [Parameter, EditorRequired] public GameState GameState { get; set; } = null!;
     [Parameter] public EventCallback<PointerEventArgs> OnPointerDown { get; set; }
@@ -121,6 +135,7 @@
     private int _lastRecycleQueue = -1;
     private int _lastBuilderLever = -1;
     private long _lastPositionVersion = -1;
+    private long _lastStateVersion = -1;
 
     private string GetInterpolatedProgress()
     {
@@ -138,6 +153,7 @@
         if (IsDragging != _lastIsDragging) return true;
         if (IsSelected != _lastIsSelected) return true;
         if (Node.PositionVersion != _lastPositionVersion) return true;
+        if (Node.StateVersion != _lastStateVersion) return true;
         if (Node.Level != _lastLevel) return true;
         if (Node.IsActive != _lastIsActive) return true;
         if (Node.IsPaused != _lastIsPaused) return true;
@@ -169,6 +185,7 @@
         _lastRecycleQueue = Node.RecycleQueue;
         _lastBuilderLever = Node.BuilderLever;
         _lastPositionVersion = Node.PositionVersion;
+        _lastStateVersion = Node.StateVersion;
         _lastHasDraggingStar = GameState.DraggingStarSlotIndex is not null;
     }
 
@@ -182,11 +199,10 @@
         if (!GameState.AreFactoryStarSlotsUnlocked())
             yield break;
 
-        var allSlots = GameState.BeamStarSlots;
-        for (var i = 0; i < allSlots.Count; i++)
+        for (var i = 0; i < BeamSides.Length; i++)
         {
-            var slot = allSlots[i];
-            if (slot.SourceFieldNodeId == Node.Id)
+            var slot = GameState.GetBeamStarSlot(Node.Id, BeamSides[i]);
+            if (slot is not null)
                 yield return slot;
         }
     }
@@ -196,8 +212,14 @@
         var side = beamStarSlot.SourceSide.ToString().ToLowerInvariant();
         var filled = beamStarSlot.HasStar ? " field-node__beam-slot--filled" : "";
         var glow = (!beamStarSlot.HasStar && GameState.CanPlaceStar(beamStarSlot.SourceFieldNodeId, beamStarSlot.SourceSide)) ? " field-node__beam-slot--glow" : "";
+        var rarity = beamStarSlot.Star?.Type switch
+        {
+            StarType.Legendary => " field-node__beam-slot--legendary",
+            StarType.Blue => " field-node__beam-slot--rare",
+            _ => string.Empty
+        };
 
-        return $"field-node__beam-slot field-node__beam-slot--{side}{filled}{glow}";
+        return $"field-node__beam-slot field-node__beam-slot--{side}{filled}{glow}{rarity}";
     }
 
     private void OnBeamStarDrop(int sourceFieldNodeId, FieldNodeSide sourceSide, DragEventArgs _)
