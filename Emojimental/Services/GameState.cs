@@ -131,7 +131,7 @@ public sealed class GameState
     public Stat Snowman { get; } = new();
     public Stat RecycledStars { get; } = new();
     public Stat MusicVolume { get; } = new() { BaseValue = 0.2 };
-    public bool Cheats { get; set; } = true; // testing
+    public bool Cheats { get; set; } = false; // testing
     public bool ParticlesEnabled { get; set; } = false;
     public double GameSpeed { get; set; } = 1.0;
     public Stat Stars { get; } = new();

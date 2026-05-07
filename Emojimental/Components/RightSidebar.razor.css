@@ -40,15 +40,28 @@
 
 .right-sidebar__header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    position: relative;
+}
+
+.right-sidebar__header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #c5d5e8, transparent);
 }
 
 .right-sidebar__header > div {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
+    width: 100%;
 }
 
 .right-sidebar__resource-icon {
