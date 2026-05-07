@@ -52,7 +52,7 @@ public class HappinessTests
         
         // Add a star to Carrots slot
         gameState.BuyResearch(ResearchType.UnlockStars);
-        Assert.Contains(gameState.StarInventory, s => s.HasStar);
+        gameState.StarInventory[0].AddStar(new Star(StarType.Yellow, new BigDouble(2), 0, 1));
         var starIndex = gameState.StarInventory.Select((s, i) => new { s, i }).First(x => x.s.HasStar).i;
         
         gameState.BeginStarDrag(starIndex);
@@ -61,5 +61,33 @@ public class HappinessTests
         // Evaluate with 1 star (multiplier should be 2x by default)
         var withStarEval = gameState.EvaluatePassiveStat(PassiveStatType.Carrots);
         Assert.Equal(10d, withStarEval.ToDouble(), 6);
+    }
+
+    [Fact]
+    public void PassiveStatStarSlot_CanReplaceExistingStar()
+    {
+        var gameState = new GameState();
+
+        gameState.ResearchPoint.BaseValue = 1_000_000;
+        gameState.BuyResearch(ResearchType.UnlockStars);
+        gameState.BuyResearch(ResearchType.UnlockPassiveGemSlots);
+
+        var initialStar = new Star(StarType.Yellow, new BigDouble(2), 0, 1);
+        var replacementStar = new Star(StarType.Blue, new BigDouble(4), 0.5, 3);
+        gameState.StarInventory[0].AddStar(initialStar);
+        gameState.StarInventory[1].AddStar(replacementStar);
+
+        gameState.BeginStarDrag(0);
+        Assert.True(gameState.TryPlacePassiveStatStar(PassiveStatType.Snowman));
+
+        gameState.BeginStarDrag(1);
+
+        Assert.True(gameState.CanPlacePassiveStatStar(PassiveStatType.Snowman));
+        Assert.True(gameState.TryPlacePassiveStatStar(PassiveStatType.Snowman));
+
+        var slot = gameState.PassiveStatStarSlots.Single(s => s.Type == PassiveStatType.Snowman);
+        Assert.Same(replacementStar, slot.Star);
+        Assert.False(gameState.StarInventory[1].HasStar);
+        Assert.Null(gameState.DraggingStarSlotIndex);
     }
 }

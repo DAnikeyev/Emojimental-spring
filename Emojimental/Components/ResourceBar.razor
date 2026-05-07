@@ -68,8 +68,8 @@
 
     protected override void OnInitialized()
     {
-        GameState.Changed += OnGameStateChanged;
         GameState.RequestResourceUiUpdate += OnRequestUiUpdate;
+        GameState.RequestUiUpdate += OnRequestUiUpdate;
     }
 
     private double GetVolume()
@@ -116,11 +116,6 @@
         }
     }
 
-    private void OnGameStateChanged()
-    {
-        InvokeAsync(StateHasChanged);
-    }
-
     private bool _shouldRender = true;
     private void OnRequestUiUpdate()
     {
@@ -140,7 +135,7 @@
 
     public void Dispose()
     {
-        GameState.Changed -= OnGameStateChanged;
         GameState.RequestResourceUiUpdate -= OnRequestUiUpdate;
+        GameState.RequestUiUpdate -= OnRequestUiUpdate;
     }
 }

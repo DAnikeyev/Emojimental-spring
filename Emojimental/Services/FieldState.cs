@@ -94,23 +94,24 @@ public sealed class FieldState
     {
     }
 
-    public void MoveFieldObject(int fieldObjectId, double x, double y)
+    public bool MoveFieldObject(int fieldObjectId, double x, double y)
     {
         var fieldObject = _fieldObjects.FirstOrDefault(candidate => candidate.Id == fieldObjectId);
         if (fieldObject is null)
-            return;
+            return false;
 
         var zoneIndex = GetZoneIndexFromPosition(x + FieldNode.Size / 2d, y + FieldNode.Size / 2d);
         var (targetX, targetY) = GetZonePosition(zoneIndex);
 
         if (_fieldObjects.Any(candidate => candidate.Id != fieldObjectId && Math.Abs(candidate.X - targetX) < 0.1d && Math.Abs(candidate.Y - targetY) < 0.1d))
-            return;
+            return false;
 
         if (Math.Abs(fieldObject.X - targetX) < 0.1d && Math.Abs(fieldObject.Y - targetY) < 0.1d)
-            return;
+            return false;
 
         fieldObject.SetPosition(targetX, targetY);
         RefreshConnections();
+        return true;
     }
 
     public void RefreshConnections()

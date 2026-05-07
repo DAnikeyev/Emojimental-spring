@@ -44,6 +44,11 @@
 
     @if (Node.Type == FieldNodeType.Recycler)
     {
+        @if (Node.RecycleQueue > 0)
+        {
+            <span class="field-node__recycler-queue">@Node.RecycleQueue</span>
+        }
+
         <div class="field-node__recycler-drop @(GameState.DraggingStarSlotIndex is not null ? "field-node__recycler-drop--active" : "")"
              @ondragover:preventDefault="true"
              @ondragenter:preventDefault="true"
@@ -51,10 +56,6 @@
              @onclick:stopPropagation="true"
              @onpointerdown:stopPropagation="true">
             @EmojiBank.Symbol(SymbolType.Stars)
-            @if (Node.RecycleQueue > 0)
-            {
-                <span class="field-node__recycler-queue">@Node.RecycleQueue</span>
-            }
         </div>
     }
 
@@ -119,6 +120,7 @@
     private bool _lastIsDragging = false;
     private int _lastRecycleQueue = -1;
     private int _lastBuilderLever = -1;
+    private long _lastPositionVersion = -1;
 
     private string GetInterpolatedProgress()
     {
@@ -135,6 +137,7 @@
     {
         if (IsDragging != _lastIsDragging) return true;
         if (IsSelected != _lastIsSelected) return true;
+        if (Node.PositionVersion != _lastPositionVersion) return true;
         if (Node.Level != _lastLevel) return true;
         if (Node.IsActive != _lastIsActive) return true;
         if (Node.IsPaused != _lastIsPaused) return true;
@@ -165,6 +168,7 @@
         _lastIsPaused = Node.IsPaused;
         _lastRecycleQueue = Node.RecycleQueue;
         _lastBuilderLever = Node.BuilderLever;
+        _lastPositionVersion = Node.PositionVersion;
         _lastHasDraggingStar = GameState.DraggingStarSlotIndex is not null;
     }
 

@@ -121,20 +121,20 @@ public static class ResearchCatalog
         new(
             ResearchType.UnlockPassiveGemSlots,
             ResourceType.ResearchPoint,
-            new BigDouble(50000),
+            new BigDouble(100000),
             $"{EmojiBank.Symbol(SymbolType.Plus)}💎",
             "passive-gems"),
         new(
             ResearchType.UnlockBurner,
             ResourceType.ResearchPoint,
-            new BigDouble(100000),
+            new BigDouble(500000),
             $"{EmojiBank.Symbol(SymbolType.Plus)}{FieldNodeType.Bonfire.Icon()}",
             "burner"),
         new(
             ResearchType.UnlockGoal,
             ResourceType.ResearchPoint,
-            new BigDouble(200000),
-            $"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Goal)}{EmojiBank.Symbol(SymbolType.Temperature)}",
+            new BigDouble(1000000),
+            $"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Goal)}",
             "goal")
     ];
 

@@ -4,28 +4,60 @@ namespace Emojimental.GameEngine.Values;
 
 public class Stat : IValueSource
 {
-    public BigDouble BaseValue;
+    private BigDouble _baseValue;
 
     private readonly List<ModifierEntry> _modifiers = new();
     private ModifierEntry[]? _cachedSortedModifiers;
+    private BigDouble? _cachedValue;
+    private string? _cachedDisplay;
     private int _nextInsertionOrder;
+    private IReadOnlyList<ModifierStage> _stageOrder =
+        new[] { ModifierStage.Add, ModifierStage.Multiply, ModifierStage.Clamp, ModifierStage.Post };
+
+    public BigDouble BaseValue
+    {
+        get => _baseValue;
+        set
+        {
+            if (_baseValue == value)
+                return;
+
+            _baseValue = value;
+            InvalidateValue();
+        }
+    }
+
+    public long Version { get; private set; }
 
     /// <summary>
     /// Controls how modifier stages are applied. Stages not present here will be applied after all listed stages.
     /// </summary>
-    public IReadOnlyList<ModifierStage> StageOrder { get; set; } =
-        new[] { ModifierStage.Add, ModifierStage.Multiply, ModifierStage.Clamp, ModifierStage.Post };
+    public IReadOnlyList<ModifierStage> StageOrder
+    {
+        get => _stageOrder;
+        set
+        {
+            _stageOrder = value;
+            _cachedSortedModifiers = null;
+            InvalidateValue();
+        }
+    }
 
     public void AddModifier(IModifier modifier)
     {
         _modifiers.Add(new ModifierEntry(modifier, _nextInsertionOrder++));
         _cachedSortedModifiers = null;
+        InvalidateValue();
     }
 
     public void RemoveModifier(IModifier modifier)
     {
-        _modifiers.RemoveAll(e => e.Modifier == modifier);
+        var removed = _modifiers.RemoveAll(e => e.Modifier == modifier);
+        if (removed == 0)
+            return;
+
         _cachedSortedModifiers = null;
+        InvalidateValue();
     }
 
     public void AddAdd(Func<EvaluationContext, BigDouble> value, int priority = 0)
@@ -50,6 +82,31 @@ public class Stat : IValueSource
             value = entry.Modifier.Apply(value, ctx);
 
         return value;
+    }
+
+    public BigDouble EvaluateCached()
+    {
+        if (_cachedValue.HasValue)
+            return _cachedValue.Value;
+
+        _cachedValue = Evaluate(new EvaluationContext());
+        return _cachedValue.Value;
+    }
+
+    public string DisplayCached()
+    {
+        if (_cachedDisplay is not null)
+            return _cachedDisplay;
+
+        _cachedDisplay = EvaluateCached().Display();
+        return _cachedDisplay;
+    }
+
+    public void InvalidateValue()
+    {
+        _cachedValue = null;
+        _cachedDisplay = null;
+        Version++;
     }
 
     private ModifierSortKey GetSortKey(ModifierEntry entry)

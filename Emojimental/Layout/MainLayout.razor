@@ -45,6 +45,9 @@
     private double _viewportHeight = VirtualHeight;
 
     private string _tempStyles = string.Empty;
+    private string _lastAppliedStyles = string.Empty;
+    private DateTime _lastStyleUpdate = DateTime.MinValue;
+    private static readonly TimeSpan StyleUpdateInterval = TimeSpan.FromMilliseconds(250);
 
     private string TemperatureStyles()
     {
@@ -100,9 +103,20 @@
 
     private double Scale => Math.Min(_viewportWidth / VirtualWidth, _viewportHeight / VirtualHeight);
 
-    private async Task UpdateStyles()
+    private async Task UpdateStyles(bool force = false)
     {
+        var now = DateTime.UtcNow;
+        if (!force && now - _lastStyleUpdate < StyleUpdateInterval)
+            return;
+
         var styles = TemperatureStyles();
+        if (styles == _lastAppliedStyles)
+            return;
+
+        _tempStyles = styles;
+        _lastAppliedStyles = styles;
+        _lastStyleUpdate = now;
+
         if (_isObservingViewport)
         {
             await JS.InvokeVoidAsync("emojimentalViewport.setStyles", _viewport, styles);
@@ -124,7 +138,7 @@
         _selfReference = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("emojimentalViewport.observe", _viewport, _selfReference);
         _isObservingViewport = true;
-        await UpdateStyles();
+        await UpdateStyles(force: true);
     }
 
     private async void OnGameStateChanged()
@@ -136,7 +150,6 @@
     private async void OnRequestUiUpdate()
     {
         await UpdateStyles();
-        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]

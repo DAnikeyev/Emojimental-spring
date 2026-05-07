@@ -53,6 +53,8 @@ public sealed class FieldNode
 
     public double Y { get; private set; }
 
+    public long PositionVersion { get; private set; }
+
     public double Progress { get; private set; }
 
     public int Level => ItemLevel + TimeLevel - 1;
@@ -111,7 +113,8 @@ public sealed class FieldNode
         return _cachedCooldownDisplay;
     }
 
-    public string BaseCooldownDisplay() => CooldownSeconds.BaseValue.Display();
+    public string BaseCooldownDisplay()
+        => (CooldownSeconds.BaseValue <= MinCooldownSeconds ? MinCooldownSeconds : CooldownSeconds.BaseValue).Display();
 
     public bool UsesFlowerUpgrade => Type == FieldNodeType.Farm;
 
@@ -149,30 +152,35 @@ public sealed class FieldNode
 
     public void SetTemperatureValueMultiplier(BigDouble multiplier)
     {
+        if (_temperatureValueMultiplier == multiplier) return;
         _temperatureValueMultiplier = multiplier;
         InvalidateCache();
     }
 
     public void SetTemperatureCooldownMultiplier(BigDouble multiplier)
     {
+        if (_temperatureCooldownMultiplier == multiplier) return;
         _temperatureCooldownMultiplier = multiplier;
         InvalidateCache();
     }
 
     public void SetBeamValueMultiplier(BigDouble multiplier)
     {
+        if (_beamValueMultiplier == multiplier) return;
         _beamValueMultiplier = multiplier;
         InvalidateCache();
     }
     
     public void SetBeamCooldownMultiplier(BigDouble multiplier)
     {
+        if (_beamCooldownMultiplier == multiplier) return;
         _beamCooldownMultiplier = multiplier;
         InvalidateCache();
     }
 
     public void SetBeamCooldownReduction(BigDouble reduction)
     {
+        if (_beamCooldownReduction == reduction) return;
         _beamCooldownReduction = reduction;
         InvalidateCache();
     }
@@ -210,6 +218,9 @@ public sealed class FieldNode
 
     public string TimeUpgradeCostDisplay()
         => GetTimeUpgradeCost().Display();
+
+    public bool CanUpgradeTime
+        => UsesFlowerUpgrade || CooldownSeconds.BaseValue > MinCooldownSeconds;
 
     public bool IsPaused { get; private set; }
     public bool IsActive { get; private set; } = true;
@@ -298,6 +309,8 @@ public sealed class FieldNode
 
     public void UpgradeTime()
     {
+        if (!CanUpgradeTime) return;
+
         TimeLevel += 1;
         if (Type == FieldNodeType.Farm)
         {
@@ -322,19 +335,28 @@ public sealed class FieldNode
             CooldownSeconds.BaseValue -= 0.1d;
         }
 
+        if (CooldownSeconds.BaseValue <= MinCooldownSeconds)
+            CooldownSeconds.BaseValue = MinCooldownSeconds;
+
         InvalidateCache();
     }
 
     internal void SetConnectionCount(int count)
     {
-        ConnectionCount = Math.Max(0, count);
+        var nextCount = Math.Max(0, count);
+        if (ConnectionCount == nextCount) return;
+        ConnectionCount = nextCount;
         InvalidateCache();
     }
 
     internal void SetPosition(double x, double y)
     {
+        if (Math.Abs(X - x) < 0.1d && Math.Abs(Y - y) < 0.1d)
+            return;
+
         X = x;
         Y = y;
+        PositionVersion++;
     }
 }
 

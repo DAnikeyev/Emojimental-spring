@@ -23,31 +23,35 @@ public class UnitTest1
                 ResearchType.UnlockTreeGrow,
                 ResearchType.UnlockTemperatureExchange,
                 ResearchType.UnlockStarRecycler,
-                ResearchType.UnlockWoodcutter,
                 ResearchType.UnlockStarImprover,
+                ResearchType.UnlockWoodcutter,
                 ResearchType.UnlockBuilder,
                 ResearchType.UnlockFlowers,
                 ResearchType.UnlockPassiveGemSlots,
-                ResearchType.UnlockBurner
+                ResearchType.UnlockBurner,
+                ResearchType.UnlockGoal
             ],
             researches.Select(research => research.Type));
 
         Assert.Equal(10d, researches[0].Price.ToDouble(), 6);
         Assert.Equal(20d, researches[1].Price.ToDouble(), 6);
-        Assert.Equal(50d, researches[2].Price.ToDouble(), 6);
-        Assert.Equal(100d, researches[3].Price.ToDouble(), 6);
-        Assert.Equal(200d, researches[4].Price.ToDouble(), 6);
-        Assert.Equal(400d, researches[5].Price.ToDouble(), 6);
-        Assert.Equal(600d, researches[6].Price.ToDouble(), 6);
-        Assert.Equal(800d, researches[7].Price.ToDouble(), 6);
+        Assert.Equal(30d, researches[2].Price.ToDouble(), 6);
+        Assert.Equal(50d, researches[3].Price.ToDouble(), 6);
+        Assert.Equal(100d, researches[4].Price.ToDouble(), 6);
+        Assert.Equal(200d, researches[5].Price.ToDouble(), 6);
+        Assert.Equal(300d, researches[6].Price.ToDouble(), 6);
+        Assert.Equal(500d, researches[7].Price.ToDouble(), 6);
         Assert.Equal(1000d, researches[8].Price.ToDouble(), 6);
-        Assert.Equal(5000d, researches[9].Price.ToDouble(), 6);
-        Assert.Equal(10000d, researches[10].Price.ToDouble(), 6);
-        Assert.Equal(15000d, researches[11].Price.ToDouble(), 6);
-        Assert.Equal(20000d, researches[12].Price.ToDouble(), 6);
-        Assert.Equal(50000d, researches[13].Price.ToDouble(), 6);
+        Assert.Equal(2000d, researches[9].Price.ToDouble(), 6);
+        Assert.Equal(4000d, researches[10].Price.ToDouble(), 6);
+        Assert.Equal(5000d, researches[11].Price.ToDouble(), 6);
+        Assert.Equal(10000d, researches[12].Price.ToDouble(), 6);
+        Assert.Equal(20000d, researches[13].Price.ToDouble(), 6);
         Assert.Equal(100000d, researches[14].Price.ToDouble(), 6);
-        Assert.Equal(1000000d, researches[15].Price.ToDouble(), 6);
+        Assert.Equal(500000d, researches[15].Price.ToDouble(), 6);
+        Assert.Equal(1000000d, researches[16].Price.ToDouble(), 6);
+
+        Assert.Equal($"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Goal)}", researches[16].EffectDisplay);
     }
 
     [Fact]
@@ -141,7 +145,7 @@ public class UnitTest1
 
         Assert.False(gameState.CanBuySapling());
         gameState.BuyResearch(ResearchType.UnlockSaplings);
-        gameState.Coin.BaseValue = 100;
+        gameState.Coin.BaseValue = gameState.GetSaplingCost();
         Assert.True(gameState.CanBuySapling());
 
         gameState.BuySapling();
@@ -152,7 +156,7 @@ public class UnitTest1
         Assert.False(gameState.CanBuyTemperatureMax());
         gameState.BuyResearch(ResearchType.UnlockTemperatureBar);
         gameState.BuyResearch(ResearchType.UnlockTemperatureExchange);
-        gameState.Energy.BaseValue = 1000;
+        gameState.Energy.BaseValue = gameState.GetTemperatureMaxCost();
         Assert.True(gameState.CanBuyTemperatureMax());
 
         gameState.BuyTemperatureMax();
@@ -165,8 +169,8 @@ public class UnitTest1
         gameState.BuyResearch(ResearchType.UnlockStarRecycler);
         gameState.BuyResearch(ResearchType.UnlockWoodcutter);
         gameState.BuyResearch(ResearchType.UnlockStarImprover);
-        gameState.StarDust.BaseValue = 10;
-        gameState.Wood.BaseValue = 10;
+        gameState.StarDust.BaseValue = gameState.GetStarUpgradeCost();
+        gameState.Wood.BaseValue = gameState.GetStarUpgradeCost();
         Assert.True(gameState.CanUpgradeStars());
 
         gameState.UpgradeStars();
@@ -208,12 +212,12 @@ public class UnitTest1
     }
 
     [Fact]
-    public void StarInventory_InitializesWithEightySlotsAndZeroStars()
+    public void StarInventory_InitializesWithEightySlotsAndStartingStars()
     {
         var gameState = new GameState();
 
         Assert.Equal(80, gameState.StarInventory.Count);
-        Assert.Equal(0, gameState.StarInventory.Count(slot => slot.HasStar));
+        Assert.Equal(3, gameState.StarInventory.Count(slot => slot.HasStar));
     }
 
     [Fact]
@@ -251,15 +255,18 @@ public class UnitTest1
     }
 
     [Fact]
-    public void TryPlaceStar_RejectsFilledOrInvalidSlotsWithoutConsumingAnotherStar()
+    public void TryPlaceStar_ReplacesFilledSlotsAndRejectsInvalidPlacementsWithoutDragging()
     {
         var gameState = new GameState();
         gameState.ResearchPoint.BaseValue = 100;
         gameState.BuyResearch(ResearchType.UnlockStars);
-        // Add another star manually for testing
-        gameState.CheatResources(); // Might need stars
-        gameState.Stars.BaseValue = 10;
-        gameState.AddStarToInventory();
+        foreach (var slot in gameState.StarInventory.Where(slot => slot.HasStar))
+        {
+            slot.ConsumeStar();
+        }
+        gameState.StarInventory[0].AddStar(new Star(StarType.Yellow, 1.2, 0, 1));
+        var replacementStar = new Star(StarType.Blue, 1.6, 0.4, 3);
+        gameState.StarInventory[1].AddStar(replacementStar);
         
         gameState.AddInitialNodes();
         var source = gameState.FieldObjects[0];
@@ -269,14 +276,17 @@ public class UnitTest1
 
         gameState.BeginStarDrag(1);
 
-        Assert.False(gameState.TryPlaceStar(source.Id, FieldNodeSide.Right));
-        Assert.True(gameState.StarInventory[1].HasStar);
-        Assert.Equal(1, gameState.StarInventory.Count(slot => slot.HasStar));
+        Assert.True(gameState.TryPlaceStar(source.Id, FieldNodeSide.Right));
+        Assert.False(gameState.StarInventory[1].HasStar);
+        Assert.Equal(1, gameState.BeamStarSlots.Count(slot =>
+            slot.SourceFieldNodeId == source.Id &&
+            slot.SourceSide == FieldNodeSide.Right &&
+            ReferenceEquals(slot.Star, replacementStar)));
 
         gameState.EndStarDrag();
 
         Assert.False(gameState.TryPlaceStar(source.Id, FieldNodeSide.Left));
-        Assert.True(gameState.StarInventory[1].HasStar);
+        Assert.Equal(0, gameState.StarInventory.Count(slot => slot.HasStar));
     }
 
     [Fact]
@@ -362,5 +372,51 @@ public class UnitTest1
         Assert.True(starredSlot.HasStar);
         Assert.Null(starredSlot.TargetFieldNodeId);
         Assert.Equal(1d, originalTarget.EvaluateValue().ToDouble(), 6);
+    }
+
+    [Fact]
+    public void RecycleWorstStar_FallsBackByRarityAndTargetsBestRecycler()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1_000_000;
+        gameState.Coin.BaseValue = 1_000_000;
+
+        gameState.BuyResearch(ResearchType.UnlockStars);
+        gameState.BuyResearch(ResearchType.UnlockStarRecycler);
+        gameState.RecycledStars.BaseValue = 1;
+
+        foreach (var slot in gameState.StarInventory.Where(slot => slot.HasStar))
+        {
+            slot.ConsumeStar();
+        }
+
+        var blueStar = new Star(StarType.Blue, 1.5, 0.4, 3);
+        var legendaryStar = new Star(StarType.Legendary, 8, 1.2, 20);
+        gameState.StarInventory[0].AddStar(blueStar);
+        gameState.StarInventory[1].AddStar(legendaryStar);
+
+        var field = (FieldState)typeof(GameState).GetField("_field", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(gameState);
+        field.AddFieldObject(FieldNodeType.Recycler);
+        field.AddFieldObject(FieldNodeType.Recycler);
+        gameState.RefreshConnections();
+
+        var recyclers = gameState.FieldObjects.Where(node => node.Type == FieldNodeType.Recycler).OrderBy(node => node.Id).ToList();
+        recyclers[1].UpgradeItem();
+        var bestRecycler = recyclers.OrderByDescending(node => node.EvaluateValue()).ThenBy(node => node.Id).First();
+        var otherRecycler = recyclers.Single(node => node.Id != bestRecycler.Id);
+
+        gameState.SendLowestYellowStarToRecycler();
+
+        Assert.False(gameState.StarInventory[0].HasStar);
+        Assert.Same(legendaryStar, gameState.StarInventory[1].Star);
+        Assert.Equal(1, bestRecycler.RecycleQueue);
+        Assert.Equal(0, otherRecycler.RecycleQueue);
+        Assert.Equal(4d, gameState.RecycledStars.BaseValue.ToDouble(), 6);
+
+        gameState.SendLowestYellowStarToRecycler();
+
+        Assert.False(gameState.StarInventory[1].HasStar);
+        Assert.Equal(2, bestRecycler.RecycleQueue);
+        Assert.Equal(24d, gameState.RecycledStars.BaseValue.ToDouble(), 6);
     }
 }

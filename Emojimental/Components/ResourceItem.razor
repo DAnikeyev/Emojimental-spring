@@ -12,23 +12,20 @@
     [Parameter, EditorRequired] public Stat Value { get; set; }
     [Parameter] public string Label { get; set; } = string.Empty;
 
-    private BigDouble _lastValue = -1;
+    private long _lastVersion = -1;
     private string _cachedDisplay = "";
 
     private string GetDisplayValue()
     {
-        var val = Evaluate(Value);
-        if (val == _lastValue) return _cachedDisplay;
-        _lastValue = val;
-        _cachedDisplay = val.Display();
+        if (Value.Version == _lastVersion) return _cachedDisplay;
+
+        _lastVersion = Value.Version;
+        _cachedDisplay = Value.DisplayCached();
         return _cachedDisplay;
     }
 
     protected override bool ShouldRender()
     {
-        // Only re-render if the value has changed
-        return Evaluate(Value) != _lastValue;
+        return Value.Version != _lastVersion;
     }
-
-    private BigDouble Evaluate(Stat stat) => new EvaluationContext().Get(stat);
 }

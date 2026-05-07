@@ -18,6 +18,7 @@ public sealed class GameState
     private const double UiUpdateIntervalSeconds = 1d / 60d;
     private const int StarInventorySize = 80;
     private const int StartingStarCount = 3;
+    private static readonly StarType[] RecycleStarTypePriority = [StarType.Yellow, StarType.Blue, StarType.Legendary];
     public const double DayCycleDurationSeconds = 60; // testing
     public const int MinTemperatureCelsius = -10;
     public const int FirstVictoryTemperatureCelsius = 20;
@@ -46,7 +47,9 @@ public sealed class GameState
         return log10 / Log10Of2;
     }
     private double _pendingUiUpdateSeconds;
-    private const double MinUiUpdateInterval = 1d / 30d; // Reduced to 30 FPS for better performance
+    private double _pendingSlowPassiveRefreshSeconds;
+    private const double MinUiUpdateInterval = UiUpdateIntervalSeconds;
+    private const double SlowPassiveRefreshIntervalSeconds = 1d;
 
     public GameState()
     {
@@ -342,7 +345,12 @@ public sealed class GameState
 
         if ((FieldObjects.Count == 0 && SnowmanCount == 0) || deltaSeconds <= 0d)
         {
-            RequestUiUpdate?.Invoke();
+            _pendingUiUpdateSeconds += deltaSeconds;
+            if (_pendingUiUpdateSeconds >= MinUiUpdateInterval)
+            {
+                _pendingUiUpdateSeconds = 0d;
+                RequestUiUpdate?.Invoke();
+            }
             return;
         }
 
@@ -467,7 +475,7 @@ public sealed class GameState
             _resources.AddResource(ResourceType.Carrot, SnowmanCarrotIncomePerSecond * deltaSeconds);
         }
 
-        Happiness.BaseValue = EvaluateHappiness();
+        RefreshSlowPassiveStats(deltaSeconds);
 
         _pendingUiUpdateSeconds += deltaSeconds;
         if (_pendingUiUpdateSeconds >= MinUiUpdateInterval)
@@ -475,6 +483,23 @@ public sealed class GameState
             _pendingUiUpdateSeconds = 0;
             RequestUiUpdate?.Invoke();
         }
+    }
+
+    private void RefreshSlowPassiveStats(double deltaSeconds)
+    {
+        _pendingSlowPassiveRefreshSeconds += deltaSeconds;
+        if (_pendingSlowPassiveRefreshSeconds < SlowPassiveRefreshIntervalSeconds)
+            return;
+
+        _pendingSlowPassiveRefreshSeconds = 0d;
+        RefreshHappiness();
+    }
+
+    private void RefreshHappiness()
+    {
+        var nextHappiness = EvaluateHappiness();
+        if (Happiness.BaseValue != nextHappiness)
+            Happiness.BaseValue = nextHappiness;
     }
 
     public IEnumerable<(ResourceType Type, BigDouble Amount)> GetDynamicConsumption(FieldNode node)
@@ -625,7 +650,6 @@ public sealed class GameState
     {
         var node = _field.FieldObjects.FirstOrDefault(n => n.Id == fieldObjectId);
         node?.SetHeld(isHeld);
-        Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
 
@@ -654,6 +678,7 @@ public sealed class GameState
     public bool CanUpgradeSelectedFieldObjectTime()
     {
         if (SelectedFieldObject is null) return false;
+        if (!SelectedFieldObject.CanUpgradeTime) return false;
         var cost = SelectedFieldObject.GetTimeUpgradeCost();
         var costResource = ResourceType.StarDust;
         return GetResource(costResource) >= cost;
@@ -662,6 +687,7 @@ public sealed class GameState
     public void UpgradeSelectedFieldObjectTime()
     {
         if (SelectedFieldObject is null) return;
+        if (!SelectedFieldObject.CanUpgradeTime) return;
         var cost = SelectedFieldObject.GetTimeUpgradeCost();
         
         var costResource = ResourceType.StarDust;
@@ -886,26 +912,46 @@ public sealed class GameState
 
     public void SendLowestYellowStarToRecycler()
     {
-        var recyclers = FieldObjects.Where(f => f.Type == FieldNodeType.Recycler).ToList();
-        if (recyclers.Count == 0) return;
-
-        var lowestYellowStarSlot = _starInventory
-            .Where(s => s.HasStar && s.Star!.Type == StarType.Yellow)
-            .OrderBy(s => s.Star!.ProductionMultiplier)
+        var recycler = FieldObjects
+            .Where(fieldObject => fieldObject.Type == FieldNodeType.Recycler)
+            .OrderByDescending(EvaluateRecyclerResultValue)
+            .ThenBy(fieldObject => fieldObject.Id)
             .FirstOrDefault();
+        if (recycler is null)
+            return;
 
-        if (lowestYellowStarSlot == null) return;
+        var starSlot = FindLowestPriorityStarSlotForRecycler();
+        if (starSlot == null)
+            return;
 
-        var randomRecycler = recyclers[Random.Shared.Next(recyclers.Count)];
-
-        var star = lowestYellowStarSlot.Star;
-        lowestYellowStarSlot.ConsumeStar();
-        randomRecycler.EnqueueRecycle();
+        var star = starSlot.Star;
+        starSlot.ConsumeStar();
+        recycler.EnqueueRecycle();
         RecycledStars.BaseValue += star?.RecycleValue ?? 1;
 
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
+
+    private StarInventorySlot? FindLowestPriorityStarSlotForRecycler()
+    {
+        foreach (var starType in RecycleStarTypePriority)
+        {
+            var slot = _starInventory
+                .Where(s => s.HasStar && s.Star!.Type == starType)
+                .OrderBy(s => s.Star!.ProductionMultiplier)
+                .ThenBy(s => s.Star!.CooldownReduction)
+                .FirstOrDefault();
+
+            if (slot != null)
+                return slot;
+        }
+
+        return null;
+    }
+
+    private BigDouble EvaluateRecyclerResultValue(FieldNode recycler)
+        => GetDisplayedFactoryValue(recycler) * EvaluatePassiveStat(PassiveStatType.RecycledStars);
 
     public void SortStarInventoryByRarityAndMultiplier()
     {
@@ -990,10 +1036,10 @@ public sealed class GameState
     public void EndFieldObjectDrag(int fieldObjectId) { }
     public void MoveFieldObject(int fieldObjectId, double x, double y)
     {
-        _field.MoveFieldObject(fieldObjectId, x, y);
-        _field.RefreshConnections();
+        if (!_field.MoveFieldObject(fieldObjectId, x, y))
+            return;
+
         ApplyBeamStarModifiers();
-        Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
 
@@ -1108,7 +1154,7 @@ public sealed class GameState
             MidpointRounding.AwayFromZero);
     }
 
-    public BigDouble EvaluateStat(Stat stat) => new EvaluationContext().Get(stat);
+    public BigDouble EvaluateStat(Stat stat) => stat.EvaluateCached();
 
     private BigDouble GetResource(ResourceType type)
         => _resources.GetResource(type, new EvaluationContext());
@@ -1207,7 +1253,7 @@ public sealed class GameState
     public bool CanPlacePassiveStatStar(PassiveStatType type)
         => IsPassiveStatStarSlotsUnlocked()
            && DraggingStarSlotIndex is not null
-           && _passiveStatStarSlots.Any(s => s.Type == type && s.Star == null);
+           && _passiveStatStarSlots.Any(s => s.Type == type);
 
     public bool TryPlacePassiveStatStar(PassiveStatType type)
     {
@@ -1224,7 +1270,7 @@ public sealed class GameState
             return false;
         }
 
-        var slotIndex = _passiveStatStarSlots.FindIndex(s => s.Type == type && s.Star == null);
+        var slotIndex = _passiveStatStarSlots.FindIndex(s => s.Type == type);
         if (slotIndex < 0)
             return false;
 
@@ -1237,8 +1283,8 @@ public sealed class GameState
         // If it's a happiness-related stat, we need to ensure UI knows about it
         if (type == PassiveStatType.Happiness || type == PassiveStatType.Carrots || type == PassiveStatType.Houses || type == PassiveStatType.Flower)
         {
-             // These affect EvaluateHappiness calculation
-             Happiness.BaseValue = EvaluateHappiness();
+             // These affect star odds, so refresh the cached passive value immediately.
+             RefreshHappiness();
         }
         
         Changed?.Invoke();

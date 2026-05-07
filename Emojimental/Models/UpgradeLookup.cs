@@ -128,7 +128,7 @@ public static class UpgradeLookup
             _energyItemUpgradeCosts[i] = energyItemCost;
             energyItemCost = Floor(energyItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _energyTimeUpgradeCosts[i] = energyTimeCost;
-            energyTimeCost *= 1.3;
+            energyTimeCost *= 1.7;
 
             // Snow (Shovel)
             _snowProductivityValues[i] = snowProductivity;
@@ -136,7 +136,7 @@ public static class UpgradeLookup
             _snowItemUpgradeCosts[i] = snowItemCost;
             snowItemCost = Floor(snowItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _snowTimeUpgradeCosts[i] = snowTimeCost;
-            snowTimeCost *= 1.3;
+            snowTimeCost *= 1.7;
 
             // Researcher Productivity: f(n+1)=FLOOR((f(n)+1)*1.3)
             _researcherProductivityValues[i] = resProductivity;
@@ -162,16 +162,16 @@ public static class UpgradeLookup
             _dustBreakerItemUpgradeCosts[i] = dustBreakerItemCost;
             dustBreakerItemCost = Floor(dustBreakerItemCost * Math.Pow(1.4, 1 + 0.05 * (i + 1)));
 
-            // Researcher Cooldown Upgrade cost (Dust): 2 * 1.5^n
-            _researcherTimeUpgradeCosts[i] = 2 * Math.Pow(1.5, i);
+            // Researcher Cooldown Upgrade cost (Dust): 2 * 1.9^n
+            _researcherTimeUpgradeCosts[i] = 2 * Math.Pow(1.9, i);
 
-            // Smelter Cooldown Upgrade cost (Stardust): lvl1=2, f(n) = f(n-1)*1.3
+            // Smelter Cooldown Upgrade cost (Stardust): lvl1=2, f(n) = f(n-1)*1.7
             _smelterTimeUpgradeCosts[i] = smelterTimeCost;
-            smelterTimeCost *= 1.3;
+            smelterTimeCost *= 1.7;
 
-            // Dust Breaker Cooldown Upgrade cost (Stardust): lvl1=5, f(n) = f(n-1)*1.5
+            // Dust Breaker Cooldown Upgrade cost (Stardust): lvl1=5, f(n) = f(n-1)*1.9
             _dustBreakerTimeUpgradeCosts[i] = dustBreakerTimeCost;
-            dustBreakerTimeCost *= 1.5;
+            dustBreakerTimeCost *= 1.9;
 
             // Farm Productivity: f(n)=f(n-1)*1.1 starting from 1
             _farmProductivityValues[i] = farmProductivity;
@@ -181,9 +181,9 @@ public static class UpgradeLookup
             _farmItemUpgradeCosts[i] = farmItemCost;
             farmItemCost = Floor(farmItemCost * Math.Pow(1.4, 1 + 0.05 * (i + 1)));
 
-            // Farm Cooldown Upgrade cost (Stardust): lvl1=10, f(n) = f(n-1)*1.5
+            // Farm Cooldown Upgrade cost (Stardust): lvl1=10, f(n) = f(n-1)*1.9
             _farmTimeUpgradeCosts[i] = farmTimeCost;
-            farmTimeCost *= 1.5;
+            farmTimeCost *= 1.9;
 
             // Woodcutter Productivity: f(n)=f(n-1)*1.2 starting from 10
             _woodcutterProductivityValues[i] = woodcutterProductivity;
@@ -193,9 +193,9 @@ public static class UpgradeLookup
             _woodcutterItemUpgradeCosts[i] = woodcutterItemCost;
             woodcutterItemCost = Floor(woodcutterItemCost * 1.3);
 
-            // Woodcutter Cooldown Upgrade cost (Stardust): lvl1=50, f(n) = f(n-1)*1.3
+            // Woodcutter Cooldown Upgrade cost (Stardust): lvl1=50, f(n) = f(n-1)*1.7
             _woodcutterTimeUpgradeCosts[i] = woodcutterTimeCost;
-            woodcutterTimeCost *= 1.3;
+            woodcutterTimeCost *= 1.7;
 
             // Builder Productivity: f(n)=f(n-1)*1.2 starting from 1
             _builderProductivityValues[i] = builderProductivity;
@@ -205,9 +205,9 @@ public static class UpgradeLookup
             _builderItemUpgradeCosts[i] = builderItemCost;
             builderItemCost = Floor(builderItemCost * Math.Pow(1.5, 1 + 0.1 * (i + 1)));
 
-            // Builder Cooldown Upgrade cost (Stardust): lvl1=100, f(n) = f(n-1)*1.2
+            // Builder Cooldown Upgrade cost (Stardust): lvl1=100, f(n) = f(n-1)*1.6
             _builderTimeUpgradeCosts[i] = builderTimeCost;
-            builderTimeCost *= 1.2;
+            builderTimeCost *= 1.6;
 
             // Garden
             _gardenProductivityValues[i] = gardenProductivity;
@@ -215,7 +215,7 @@ public static class UpgradeLookup
             _gardenItemUpgradeCosts[i] = gardenItemCost;
             gardenItemCost = Floor(gardenItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _gardenTimeUpgradeCosts[i] = gardenTimeCost;
-            gardenTimeCost *= 1.4;
+            gardenTimeCost *= 1.8;
 
             // Bonfire
             _bonfireProductivityValues[i] = bonfireProductivity;
@@ -223,7 +223,7 @@ public static class UpgradeLookup
             _bonfireItemUpgradeCosts[i] = bonfireItemCost;
             bonfireItemCost = Floor(bonfireItemCost * 1.4);
             _bonfireTimeUpgradeCosts[i] = bonfireTimeCost;
-            bonfireTimeCost = Floor(bonfireTimeCost * 1.4);
+            bonfireTimeCost = Floor(bonfireTimeCost * 1.8);
 
             // Recycler
             _recyclerProductivityValues[i] = recyclerProductivity;
@@ -231,7 +231,7 @@ public static class UpgradeLookup
             _recyclerItemUpgradeCosts[i] = recyclerItemCost;
             recyclerItemCost = Floor(recyclerItemCost * Math.Pow(2.0, 1 + 0.1 * (i + 1)));
             _recyclerTimeUpgradeCosts[i] = recyclerTimeCost;
-            recyclerTimeCost *= 1.5;
+            recyclerTimeCost *= 1.9;
 
             // Upgrade cost for items = x^(2.1) for level x, rounded down.
             _itemUpgradeCosts[i] = new BigDouble(Math.Floor(Math.Pow(i, 2.1)));

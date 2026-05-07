@@ -15,29 +15,17 @@
 
 @code {
     private const double LogicTickSeconds = 1.0 / 60.0;
-    private const double UiTickSeconds = 1.0 / 20.0; // Slowed down from 30 FPS to 20 FPS
-    private const double ResourceTickSeconds = 1.0 / 5.0; // 5 FPS for resources
 
     [Inject] public required GameState GameState { get; set; }
 
     private Timer? _logicTimer;
-    private Timer? _uiTimer;
-    private Timer? _resourceTimer;
     private long _lastTickTimestamp;
 
     protected override void OnInitialized()
     {
-        GameState.RequestUiUpdate += OnRequestUiUpdate;
         _lastTickTimestamp = Stopwatch.GetTimestamp();
         
-        // Logic runs at 60 FPS
         _logicTimer = new Timer(_ => TickLogic(), null, TimeSpan.Zero, TimeSpan.FromSeconds(LogicTickSeconds));
-        
-        // UI updates run at 20 FPS
-        _uiTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(UiTickSeconds), TimeSpan.FromSeconds(UiTickSeconds));
-
-        // Resource updates run at 5 FPS
-        _resourceTimer = new Timer(_ => GameState.NotifyResourceUiUpdate(), null, TimeSpan.FromSeconds(ResourceTickSeconds), TimeSpan.FromSeconds(ResourceTickSeconds));
     }
 
     private void TickLogic()
@@ -49,13 +37,8 @@
         GameState.Advance(elapsedSeconds);
     }
 
-    private void OnRequestUiUpdate() { }
-
     public void Dispose()
     {
-        GameState.RequestUiUpdate -= OnRequestUiUpdate;
         _logicTimer?.Dispose();
-        _uiTimer?.Dispose();
-        _resourceTimer?.Dispose();
     }
 }
