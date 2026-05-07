@@ -30,17 +30,6 @@
             var hasStar = starSlot.HasStar;
             var isDragging = GameState.DraggingStarSlotIndex == starSlot.Index;
             var canDrop = GameState.CanDropStarIntoInventory(starSlot.Index);
-            
-            var starBgStyle = "";
-            if (star != null)
-            {
-                starBgStyle = star.Type switch
-                {
-                    StarType.Legendary => "background-color: orange;",
-                    StarType.Blue => "background-color: blue;",
-                    _ => ""
-                };
-            }
 
             var starSlotClasses = $"left-sidebar__star-slot{(hasStar ? " left-sidebar__star-slot--filled" : string.Empty)}{(isDragging ? " left-sidebar__star-slot--dragging" : string.Empty)}{(canDrop ? " left-sidebar__star-slot--drop-target" : string.Empty)}";
 

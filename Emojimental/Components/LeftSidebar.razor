@@ -3,20 +3,20 @@
 @using Emojimental.Models
 <aside class="left-sidebar" data-cycle-phase="@CyclePhase">
     <nav class="left-sidebar__menu">
-        <div class="left-sidebar__menu-item @(ActiveMenu == "Factory" ? "left-sidebar__menu-item--active" : "")" 
+        <div class="left-sidebar__menu-item left-sidebar__menu-item--factory @(ActiveMenu == "Factory" ? "left-sidebar__menu-item--active" : "")" 
              @onclick='() => SetMenu("Factory")' title="Factory">
             @EmojiBank.Symbol(SymbolType.Factory)
         </div>
         @if (GameState.CountFieldObjects(FieldNodeType.Researcher) > 0)
         {
-            <div class="left-sidebar__menu-item @(ActiveMenu == "Research" ? "left-sidebar__menu-item--active" : "")" 
+            <div class="left-sidebar__menu-item left-sidebar__menu-item--research @(ActiveMenu == "Research" ? "left-sidebar__menu-item--active" : "")" 
                  @onclick='() => SetMenu("Research")' title="Research">
                 @EmojiBank.Symbol(SymbolType.Research)
             </div>
         }
         @if (GameState.HasResearch(ResearchType.UnlockStars))
         {
-            <div class="left-sidebar__menu-item @(ActiveMenu == "Stars" ? "left-sidebar__menu-item--active" : "")" 
+            <div class="left-sidebar__menu-item left-sidebar__menu-item--stars @(ActiveMenu == "Stars" ? "left-sidebar__menu-item--active" : "")" 
                  @onclick='() => SetMenu("Stars")' title="Stars">
                 @EmojiBank.Symbol(SymbolType.Stars)
             </div>

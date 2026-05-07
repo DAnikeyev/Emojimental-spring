@@ -13,8 +13,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="BGM_Snow_Theme_Loop.flac" />
-      <Content Include="BGM_Snow_Theme_Loop.flac" />
+      <Content Update="wwwroot\audio\theme.mp3">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>

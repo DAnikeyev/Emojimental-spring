@@ -20,8 +20,8 @@
                              @ref="_trackRef"
                              role="slider"
                              tabindex="0"
-                             aria-valuemin="-10"
-                             aria-valuemax="20"
+                             aria-valuemin="@SliderMin"
+                             aria-valuemax="@SliderMax"
                              aria-valuenow="@GameState.TemperatureCelsius"
                              aria-valuetext="@(GameState.TemperatureCelsius + "°C")"
                              aria-label="Temperature in degrees Celsius"
@@ -87,11 +87,10 @@
 </aside>
 
 @code {
-    private static readonly int[] TemperatureMarks = [-10, -5, 0, 5, 10, 15, 20];
-    private const int SliderMin = -10;
-    private const int SliderMax = 20;
+    private const int SliderMin = GameState.MinTemperatureCelsius;
     private static readonly DateTime GameStartDate = new(2026, 4, 1);
     private static readonly DateTime GameEndDate = new(2026, 5, 31);
+    private int SliderMax => GameState.GoalTemperatureCelsius;
 
     private ElementReference _trackRef;
     private TrackBounds? _dragBounds;
@@ -211,51 +210,60 @@
 
 
     private string _cachedThemeStyle = "";
-    private double _lastThemeProgress = -1;
+    private int _lastThemeTemperatureCelsius = int.MinValue;
     private double _lastThemeDayP = -1;
 
     private string TemperatureThemeStyle()
     {
         var progress = GameState.TemperatureProgress;
+        var temperature = GameState.TemperatureCelsius;
         var dayP = GameState.DayCyclePosition;
 
-        if (Math.Abs(progress - _lastThemeProgress) < 0.001 && Math.Abs(dayP - _lastThemeDayP) < 0.001)
+        if (temperature == _lastThemeTemperatureCelsius && Math.Abs(dayP - _lastThemeDayP) < 0.001)
         {
             return _cachedThemeStyle;
         }
 
-        _lastThemeProgress = progress;
+        _lastThemeTemperatureCelsius = temperature;
         _lastThemeDayP = dayP;
 
         var inv = System.Globalization.CultureInfo.InvariantCulture;
         
         var nightFactor = 0.85 + 0.15 * Math.Cos((dayP - 0.5) * 2.0 * Math.PI);
 
-        string MixWithNight(int r1, int g1, int b1, int r2, int g2, int b2, double p, double alpha = 1.0)
+        string MixWithNight(
+            int coldR, int coldG, int coldB,
+            int warmR, int warmG, int warmB,
+            int hotR, int hotG, int hotB,
+            double alpha = 1.0)
         {
-            return GameState.MixColor((int)(r1 * nightFactor), (int)(g1 * nightFactor), (int)(b1 * nightFactor), (int)(r2 * nightFactor), (int)(g2 * nightFactor), (int)(b2 * nightFactor), p, alpha);
+            return GameState.MixHeatColor(
+                (int)(coldR * nightFactor), (int)(coldG * nightFactor), (int)(coldB * nightFactor),
+                (int)(warmR * nightFactor), (int)(warmG * nightFactor), (int)(warmB * nightFactor),
+                (int)(hotR * nightFactor), (int)(hotG * nightFactor), (int)(hotB * nightFactor),
+                alpha);
         }
 
         _cachedThemeStyle = string.Format(inv, "--temperature-progress:{0:F3};--temperature-coldness:{1:F3};--sidebar-top:{2};--sidebar-bottom:{3};--sidebar-accent:{4};--sidebar-accent-strong:{5};--sidebar-accent-soft:{6};--sidebar-surface:{7};--sidebar-surface-strong:{8};--sidebar-border:{9};--sidebar-text:{10};--sidebar-label:{11};--sidebar-thumb:{12};--sidebar-shadow:{13};--sidebar-chip-shadow:{14};--sidebar-glow:{15};--clock-night:{16};--clock-dawn:{17};--clock-day:{18};",
             progress,
             1d - progress,
-            MixWithNight(249, 252, 255, 255, 247, 239, progress),
-            MixWithNight(229, 238, 252, 255, 225, 196, progress),
-            MixWithNight(107, 139, 204, 255, 152, 94, progress),
-            MixWithNight(73, 106, 181, 228, 113, 73, progress),
-            MixWithNight(194, 218, 255, 255, 221, 186, progress, 0.92d),
-            MixWithNight(255, 255, 255, 255, 249, 242, progress, 0.82d),
-            MixWithNight(255, 255, 255, 255, 244, 233, progress, 0.94d),
-            MixWithNight(216, 226, 243, 246, 205, 169, progress),
-            MixWithNight(31, 42, 68, 104, 57, 37, progress),
-            MixWithNight(91, 104, 128, 124, 82, 57, progress),
-            MixWithNight(109, 115, 133, 255, 141, 93, progress),
-            MixWithNight(46, 74, 122, 158, 83, 35, progress, 0.16d),
-            MixWithNight(52, 78, 118, 160, 90, 43, progress, 0.14d),
-            MixWithNight(126, 166, 235, 255, 176, 104, progress, 0.30d),
-            GameState.MixColor(29, 43, 93, 77, 81, 128, progress),
-            GameState.MixColor(248, 166, 108, 255, 171, 118, progress),
-            GameState.MixColor(135, 206, 235, 187, 229, 163, progress));
+            MixWithNight(249, 252, 255, 255, 247, 239, 255, 225, 217),
+            MixWithNight(229, 238, 252, 255, 225, 196, 255, 156, 124),
+            MixWithNight(107, 139, 204, 255, 152, 94, 255, 82, 48),
+            MixWithNight(73, 106, 181, 228, 113, 73, 221, 57, 32),
+            MixWithNight(194, 218, 255, 255, 221, 186, 255, 190, 171, 0.92d),
+            MixWithNight(255, 255, 255, 255, 249, 242, 255, 241, 236, 0.82d),
+            MixWithNight(255, 255, 255, 255, 244, 233, 255, 230, 220, 0.94d),
+            MixWithNight(216, 226, 243, 246, 205, 169, 237, 140, 120),
+            MixWithNight(31, 42, 68, 104, 57, 37, 128, 36, 24),
+            MixWithNight(91, 104, 128, 124, 82, 57, 144, 54, 40),
+            MixWithNight(109, 115, 133, 255, 141, 93, 255, 96, 62),
+            MixWithNight(46, 74, 122, 158, 83, 35, 166, 52, 28, 0.16d),
+            MixWithNight(52, 78, 118, 160, 90, 43, 174, 61, 33, 0.14d),
+            MixWithNight(126, 166, 235, 255, 176, 104, 255, 108, 72, 0.30d),
+            GameState.MixHeatColor(29, 43, 93, 77, 81, 128, 108, 45, 61),
+            GameState.MixHeatColor(248, 166, 108, 255, 171, 118, 255, 99, 75),
+            GameState.MixHeatColor(135, 206, 235, 187, 229, 163, 255, 146, 112));
         
         return _cachedThemeStyle;
     }
@@ -267,7 +275,9 @@
     }
 
     private IEnumerable<int> VisibleTemperatureMarks()
-        => TemperatureMarks;
+        => SliderMax > GameState.FirstVictoryTemperatureCelsius
+            ? [-10, 0, 10, 20, 30, 40]
+            : [-10, -5, 0, 5, 10, 15, 20];
 
     private static string FormatBonus(int percent)
         => $"{(percent >= 0 ? "+" : string.Empty)}{percent}%";
@@ -310,22 +320,26 @@
     private string RailGradientStyle()
     {
         var range = SliderMax - SliderMin;
-        var maxTemp = GameState.MaxTemperatureCelsius;
-        // Position of max temp from top (0% = top = 20°C, 100% = bottom = -10°C)
+        var maxTemp = Math.Min(GameState.MaxTemperatureCelsius, SliderMax);
         var maxTempPercent = ((SliderMax - maxTemp) / (double)range) * 100d;
+        var firstVictoryPercent = ((SliderMax - GameState.FirstVictoryTemperatureCelsius) / (double)range) * 100d;
         
         var inv = System.Globalization.CultureInfo.InvariantCulture;
 
-        // Softer colors
         var grey = "rgb(180, 185, 195)"; 
-        var softRed = "rgb(255, 110, 110)";
+        var softFire = "rgb(255, 76, 54)";
+        var softRed = "rgb(255, 126, 98)";
         var softBlue = "rgb(110, 160, 255)";
         
-        // Two layers: 
-        // 1. A grey "cover" from 0% to maxTempPercent
-        // 2. The full temperature gradient from +20 (0%) to -10 (100%)
-        return string.Format(inv, "background: linear-gradient(180deg, {0} 0%, {0} {1:F2}%, transparent {1:F2}%), linear-gradient(180deg, {2} 0%, {3} 100%);", 
-            grey, maxTempPercent, softRed, softBlue);
+        return string.Format(
+            inv,
+            "background: linear-gradient(180deg, {0} 0%, {0} {1:F2}%, transparent {1:F2}%), linear-gradient(180deg, {2} 0%, {3} {4:F2}%, {5} 100%);",
+            grey,
+            maxTempPercent,
+            softFire,
+            softRed,
+            firstVictoryPercent,
+            softBlue);
     }
 
 

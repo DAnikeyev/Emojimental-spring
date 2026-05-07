@@ -4,7 +4,7 @@ namespace Emojimental.Models;
 
 public static class UpgradeLookup
 {
-    private const int MaxLevel = 1000;
+    private const int MaxLevel = 100;
     private static readonly Dictionary<int, BigDouble> _itemUpgradeCosts = new();
     private static readonly Dictionary<int, BigDouble> _timeUpgradeCosts = new();
     private static readonly Dictionary<int, BigDouble> _snowmanCosts = new();
@@ -114,9 +114,9 @@ public static class UpgradeLookup
             // Sapling cost: 10000 * 2^(i-1) (100x more expensive)
             _saplingCosts[i] = new BigDouble(10000 * Math.Pow(1.8, i - 1));
 
-            // Temperature cost: lvl1=1000, f(n) = f(n-1)*1.7
+            // Temperature cost: lvl1=1000, f(n) = f(n-1)*1.9
             _temperatureMaxCosts[i] = temperatureMaxCost;
-            temperatureMaxCost = Floor(temperatureMaxCost * 1.9);
+            temperatureMaxCost = Floor(temperatureMaxCost * (1.9+Math.Max(i-20, 0)*0.1));
 
             // Stars cost: lvl1=10, f(n) = f(n-1)*100
             _starUpgradeCosts[i] = starUpgradeCost;

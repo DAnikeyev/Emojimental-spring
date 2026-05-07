@@ -178,6 +178,36 @@ public class UnitTest1
     }
 
     [Fact]
+    public void ContinueVictory_SecondActStartsFromFirstVictoryTemperatureCap()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1_000_000;
+
+        gameState.BuyResearch(ResearchType.UnlockTemperatureBar);
+        gameState.BuyResearch(ResearchType.UnlockTemperatureExchange);
+        gameState.Energy.BaseValue = 1e100;
+
+        while (gameState.MaxTemperatureCelsius < GameState.FirstVictoryTemperatureCelsius)
+        {
+            Assert.True(gameState.CanBuyTemperatureMax());
+            gameState.BuyTemperatureMax();
+        }
+
+        gameState.SetTemperature(GameState.FirstVictoryTemperatureCelsius);
+
+        Assert.True(gameState.IsVictory);
+
+        gameState.ContinueVictory();
+
+        Assert.True(gameState.VictoryContinued);
+        Assert.False(gameState.IsVictory);
+        Assert.Equal(GameState.FirstVictoryTemperatureCelsius, gameState.MaxTemperatureCelsius);
+        Assert.Equal(GameState.FinalVictoryTemperatureCelsius, gameState.GoalTemperatureCelsius);
+        Assert.Equal(GameState.FirstVictoryTemperatureCelsius, gameState.TemperatureCelsius);
+        Assert.True(gameState.CanBuyTemperatureMax());
+    }
+
+    [Fact]
     public void StarInventory_InitializesWithEightySlotsAndZeroStars()
     {
         var gameState = new GameState();

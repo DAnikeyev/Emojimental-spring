@@ -13,13 +13,12 @@ The game features a minimalist UI where most information is conveyed through emo
 
 ## Credits 🎵
 
-- **Music**: Music by Cleyton Kauffman - [SoundCloud](https://soundcloud.com/cleytonkauffman)
+- **Music**: Music by <a href="https://pixabay.com/users/monika_mutafova-47881462/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=305290">Monika_Mutafova</a> from <a href="https://pixabay.com/music//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=305290">Pixabay</a>
 
 ## Development 🛠️
 
 This project is built with:
 - **Blazor WebAssembly** (.NET 10)
-- **BreakInfinity.cs** for handling large numbers
 
 ### Build and Run
 
@@ -32,5 +31,3 @@ To run the project:
 ```powershell
 dotnet run --project Emojimental
 ```
-
-For more details on publishing to itch.io, see [ITCHIO.md](ITCHIO.md).

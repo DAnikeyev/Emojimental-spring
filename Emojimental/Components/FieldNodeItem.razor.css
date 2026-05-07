@@ -1,4 +1,11 @@
 ﻿.field-node {
+    --field-node-accent: var(--theme-accent, #53a9ff);
+    --field-node-border: color-mix(in srgb, var(--field-node-accent) 42%, white);
+    --field-node-surface-top: rgba(255, 255, 255, 0.98);
+    --field-node-surface-bottom: color-mix(in srgb, var(--theme-surface-bottom, #ecf4ff) 78%, white);
+    --field-node-progress-track: color-mix(in srgb, var(--field-node-accent) 18%, white);
+    --field-node-progress-start: color-mix(in srgb, var(--field-node-accent) 78%, white);
+    --field-node-progress-end: var(--field-node-accent);
     position: absolute;
     z-index: 2;
     display: flex;
@@ -7,8 +14,8 @@
     gap: 0.35rem;
     padding: 0.7rem;
     border-radius: 2rem;
-    border: 1px solid color-mix(in srgb, var(--theme-accent, #53a9ff) 42%, white);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), color-mix(in srgb, var(--theme-surface-bottom, #ecf4ff) 78%, white));
+    border: 1px solid var(--field-node-border);
+    background: linear-gradient(180deg, var(--field-node-surface-top), var(--field-node-surface-bottom));
     box-shadow: 0 12px 30px var(--app-shadow, rgba(39, 72, 121, 0.15));
     cursor: grab;
     user-select: none;
@@ -62,24 +69,99 @@
 }
 
 .field-node--snow {
-    border-color: color-mix(in srgb, var(--theme-bonus-snow) 48%, white);
-    background: linear-gradient(180deg, #ffffff, #edf8ff);
+    --field-node-accent: #63b3ed;
+    --field-node-border: #bfdcf7;
+    --field-node-surface-top: #ffffff;
+    --field-node-surface-bottom: #edf8ff;
+    --field-node-progress-start: #90cdf4;
+    --field-node-progress-end: #63b3ed;
 }
 
 .field-node--energy {
-    border-color: color-mix(in srgb, var(--theme-bonus-energy) 48%, white);
-    background: linear-gradient(180deg, #fffdf7, #fff3cb);
+    --field-node-accent: #ecc94b;
+    --field-node-border: #efd493;
+    --field-node-surface-top: #fffdf7;
+    --field-node-surface-bottom: #fff3cb;
+    --field-node-progress-start: #f6ad55;
+    --field-node-progress-end: #ecc94b;
 }
 
 .field-node--smelter {
-    border-color: color-mix(in srgb, var(--theme-bonus-water) 48%, white);
-    background: linear-gradient(180deg, #f0f7ff, #d6eaff);
+    --field-node-accent: #3b82f6;
+    --field-node-border: #93bdef;
+    --field-node-surface-top: #f0f7ff;
+    --field-node-surface-bottom: #d6eaff;
+    --field-node-progress-start: #93c5fd;
+    --field-node-progress-end: #3b82f6;
+}
+
+.field-node--researcher {
+    --field-node-accent: #8b5cf6;
+    --field-node-border: #c4b5fd;
+    --field-node-surface-top: #fbf7ff;
+    --field-node-surface-bottom: #ede9fe;
+    --field-node-progress-start: #c4b5fd;
+    --field-node-progress-end: #8b5cf6;
+}
+
+.field-node--recycler {
+    --field-node-accent: #7c3aed;
+    --field-node-border: #c4b5fd;
+    --field-node-surface-top: #faf7ff;
+    --field-node-surface-bottom: #e9ddff;
+    --field-node-progress-start: #a78bfa;
+    --field-node-progress-end: #7c3aed;
+}
+
+.field-node--farm {
+    --field-node-accent: #38a169;
+    --field-node-border: #97d7ac;
+    --field-node-surface-top: #f7fff7;
+    --field-node-surface-bottom: #daf5de;
+    --field-node-progress-start: #68d391;
+    --field-node-progress-end: #38a169;
+}
+
+.field-node--woodcutter {
+    --field-node-accent: #8b5e34;
+    --field-node-border: #d4b38a;
+    --field-node-surface-top: #fffaf3;
+    --field-node-surface-bottom: #f0dfc7;
+    --field-node-progress-start: #b7791f;
+    --field-node-progress-end: #744210;
+}
+
+.field-node--builder {
+    --field-node-accent: #64748b;
+    --field-node-border: #cbd5e1;
+    --field-node-surface-top: #f8fafc;
+    --field-node-surface-bottom: #e2e8f0;
+    --field-node-progress-start: #a0aec0;
+    --field-node-progress-end: #4a5568;
+}
+
+.field-node--bonfire {
+    --field-node-accent: #ef4444;
+    --field-node-border: #f8b4b4;
+    --field-node-surface-top: #fff7f5;
+    --field-node-surface-bottom: #ffe1d6;
+    --field-node-progress-start: #fc8181;
+    --field-node-progress-end: #e53e3e;
+}
+
+.field-node--dust-breaker {
+    --field-node-accent: #f59e0b;
+    --field-node-border: #f6d28b;
+    --field-node-surface-top: #fffaf0;
+    --field-node-surface-bottom: #ffe7c2;
+    --field-node-progress-start: #fbbf24;
+    --field-node-progress-end: #d97706;
 }
 
 .field-node--selected {
     z-index: 3;
-    border-color: var(--theme-accent, #53a9ff);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #53a9ff) 24%, transparent), 0 16px 32px color-mix(in srgb, var(--theme-card-shadow, rgba(39, 72, 121, 0.22)) 100%, transparent);
+    border-color: var(--field-node-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-node-accent) 24%, transparent), 0 16px 32px color-mix(in srgb, var(--theme-card-shadow, rgba(39, 72, 121, 0.22)) 100%, transparent);
 }
 
 .field-node--dragging {
@@ -114,12 +196,12 @@
     margin-top: 2.2rem;
     border-radius: 999px;
     overflow: hidden;
-    background: color-mix(in srgb, var(--theme-accent, #53a9ff) 18%, white);
+    background: var(--field-node-progress-track);
 }
 
 .field-node__progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent, #53a9ff) 78%, white), var(--theme-accent, #53a9ff));
+    background: linear-gradient(90deg, var(--field-node-progress-start), var(--field-node-progress-end));
     box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.35);
     transition: width 0.1s linear;
 }
@@ -131,31 +213,8 @@
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.08em;
+    color: var(--field-node-progress-end);
     text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
-}
-
-.field-node--snow .field-node__progress-fill {
-    background: linear-gradient(90deg, #90cdf4, #63b3ed);
-}
-
-.field-node--energy .field-node__progress-fill {
-    background: linear-gradient(90deg, #f6ad55, #ecc94b);
-}
-
-.field-node--garden .field-node__progress-fill {
-    background: linear-gradient(90deg, #68d391, #38a169);
-}
-
-.field-node--woodcutter .field-node__progress-fill {
-    background: linear-gradient(90deg, #b7791f, #744210);
-}
-
-.field-node--builder .field-node__progress-fill {
-    background: linear-gradient(90deg, #a0aec0, #4a5568);
-}
-
-.field-node--bonfire .field-node__progress-fill {
-    background: linear-gradient(90deg, #fc8181, #e53e3e);
 }
 
 .field-node__core {
@@ -264,7 +323,7 @@
     justify-content: center;
     font-size: 2.5rem;
     background: rgba(187, 216, 250, 0.2);
-    border: 2px dashed var(--theme-accent, #53a9ff);
+    border: 2px dashed var(--field-node-accent, var(--theme-accent, #53a9ff));
     border-radius: 1rem;
     opacity: 0;
     pointer-events: none;
@@ -286,7 +345,7 @@
     position: absolute;
     top: -0.5rem;
     right: -0.5rem;
-    background: var(--theme-accent-strong, #2f74d6);
+    background: color-mix(in srgb, var(--field-node-accent, var(--theme-accent-strong, #2f74d6)) 88%, black);
     color: white;
     font-size: 0.8rem;
     font-weight: 800;

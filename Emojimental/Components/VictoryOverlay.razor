@@ -3,14 +3,14 @@
 @inject GameState GameState
 @inject NavigationManager NavigationManager
 
-<div class="victory-overlay">
+<div class="victory-overlay @(IsFinalVictory ? "victory-overlay--final" : string.Empty)">
     <div class="victory-background">
         @for (int i = 0; i < 150; i++)
         {
             var leftStr = Random.Shared.Next(0, 100).ToString() + "%";
             var topStr = Random.Shared.Next(0, 100).ToString() + "%";
             var delayStr = (Random.Shared.NextDouble() * 15).ToString("F2") + "s";
-            var emoji = Random.Shared.Next(0, 2) == 0 ? "🌿" : "🌲";
+            var emoji = RandomVictoryEmoji();
             <div class="victory-emoji" style="left: @leftStr; top: @topStr; animation-delay: @delayStr">
                 @emoji
             </div>
@@ -31,9 +31,12 @@
         <div class="victory-title">@EmojiBank.Symbol(SymbolType.Done)</div>
         <div class="victory-timer">@FormatPlayTime(GameState.PlayTime)</div>
         <div class="victory-actions">
-            <button class="victory-button" @onclick="ContinuePlay">
-                ▶️
-            </button>
+            @if (!IsFinalVictory)
+            {
+                <button class="victory-button" @onclick="ContinuePlay">
+                    ▶️
+                </button>
+            }
             <button class="victory-button" @onclick="RestartGame">
                 🔄
             </button>
@@ -42,6 +45,8 @@
 </div>
 
 @code {
+    private bool IsFinalVictory => GameState.VictoryContinued;
+
     private void ContinuePlay()
     {
         GameState.ContinueVictory();
@@ -60,5 +65,20 @@
         var ss = (int)totalSeconds % 60;
         var ff = (int)((totalSeconds - Math.Truncate(totalSeconds)) * 100);
         return $"{hh:D2}:{mm:D2}:{ss:D2}:{ff:D2}";
+    }
+
+    private string RandomVictoryEmoji()
+    {
+        if (!IsFinalVictory)
+        {
+            return Random.Shared.Next(0, 2) == 0 ? "🌿" : "🌲";
+        }
+
+        return Random.Shared.Next(0, 3) switch
+        {
+            0 => "🌿",
+            1 => "🌲",
+            _ => "🔥"
+        };
     }
 }

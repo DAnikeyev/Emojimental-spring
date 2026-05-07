@@ -19,6 +19,9 @@ public sealed class GameState
     private const int StarInventorySize = 80;
     private const int StartingStarCount = 3;
     public const double DayCycleDurationSeconds = 60; // testing
+    public const int MinTemperatureCelsius = -10;
+    public const int FirstVictoryTemperatureCelsius = 20;
+    public const int FinalVictoryTemperatureCelsius = 40;
     private const int InitialTemperatureCelsius = -5;
     private const int InitialMaxTemperatureCelsius = -5;
 
@@ -59,9 +62,11 @@ public sealed class GameState
         get
         {
             var temperature = EvaluateStat(Temperature).ToDouble();
-            return Math.Clamp((temperature + 10d) / 30d, 0d, 1d);
+            return Math.Clamp((temperature - MinTemperatureCelsius) / (double)(FirstVictoryTemperatureCelsius - MinTemperatureCelsius), 0d, 1d);
         }
     }
+
+    public int GoalTemperatureCelsius => VictoryContinued ? FinalVictoryTemperatureCelsius : FirstVictoryTemperatureCelsius;
 
     public string MixColor(int startR, int startG, int startB, int endR, int endG, int endB, double progress, double alpha = 1d)
     {
@@ -73,6 +78,29 @@ public sealed class GameState
         return alpha >= 0.999d
             ? $"rgb({r} {g} {b})"
             : FormattableString.Invariant($"rgba({r}, {g}, {b}, {alpha:F3})");
+    }
+
+    public string MixHeatColor(
+        int coldR, int coldG, int coldB,
+        int warmR, int warmG, int warmB,
+        int hotR, int hotG, int hotB,
+        double alpha = 1d)
+    {
+        var temperature = EvaluateStat(Temperature).ToDouble();
+        if (temperature <= FirstVictoryTemperatureCelsius)
+        {
+            var warmProgress = Math.Clamp(
+                (temperature - MinTemperatureCelsius) / (double)(FirstVictoryTemperatureCelsius - MinTemperatureCelsius),
+                0d,
+                1d);
+            return MixColor(coldR, coldG, coldB, warmR, warmG, warmB, warmProgress, alpha);
+        }
+
+        var heatProgress = Math.Clamp(
+            (temperature - FirstVictoryTemperatureCelsius) / (double)(FinalVictoryTemperatureCelsius - FirstVictoryTemperatureCelsius),
+            0d,
+            1d);
+        return MixColor(warmR, warmG, warmB, hotR, hotG, hotB, heatProgress, alpha);
     }
 
     public void AddInitialNodes()
@@ -99,8 +127,7 @@ public sealed class GameState
     public Stat StarDust => _resources.StarDust;
     public Stat Snowman { get; } = new();
     public Stat RecycledStars { get; } = new();
-    public Stat MusicVolume { get; } = new() { BaseValue = 0.5 };
-
+    public Stat MusicVolume { get; } = new() { BaseValue = 0.2 };
     public bool Cheats { get; set; } = true; // testing
     public bool ParticlesEnabled { get; set; } = false;
     public double GameSpeed { get; set; } = 1.0;
@@ -739,7 +766,7 @@ public sealed class GameState
     public bool CanBuyTemperatureMax()
         => HasResearch(ResearchType.UnlockTemperatureBar)
            && HasResearch(ResearchType.UnlockTemperatureExchange)
-           && MaxTemperatureCelsius < 20
+           && MaxTemperatureCelsius < GoalTemperatureCelsius
            && EvaluateStat(Energy) >= GetTemperatureMaxCost();
 
     public void BuyTemperatureMax()
@@ -983,7 +1010,7 @@ public sealed class GameState
         if (!CanAdjustTemperature())
             return;
 
-        var clampedTemperature = Math.Clamp(temperatureCelsius, -10, MaxTemperatureCelsius);
+        var clampedTemperature = Math.Clamp(temperatureCelsius, MinTemperatureCelsius, MaxTemperatureCelsius);
         var nextTemperature = new BigDouble(clampedTemperature);
         if (Temperature.BaseValue == nextTemperature)
             return;
@@ -991,7 +1018,7 @@ public sealed class GameState
         Temperature.BaseValue = nextTemperature;
         ApplyTemperatureModifiers();
 
-        if (TemperatureCelsius >= 20 && !VictoryContinued)
+        if (TemperatureCelsius >= GoalTemperatureCelsius)
         {
             IsVictory = true;
         }
@@ -1004,6 +1031,16 @@ public sealed class GameState
     {
         IsVictory = false;
         VictoryContinued = true;
+        MaxTemperatureCelsius = FirstVictoryTemperatureCelsius;
+
+        var clampedTemperature = Math.Clamp(TemperatureCelsius, MinTemperatureCelsius, MaxTemperatureCelsius);
+        var nextTemperature = new BigDouble(clampedTemperature);
+        if (Temperature.BaseValue != nextTemperature)
+        {
+            Temperature.BaseValue = nextTemperature;
+            ApplyTemperatureModifiers();
+        }
+
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
@@ -1032,13 +1069,26 @@ public sealed class GameState
     public int GetSnowTemperatureBonusPercent()
     {
         var temperature = EvaluateStat(Temperature).ToDouble();
-        return (int)Math.Round(InterpolateLinear(temperature, (-10d, 100d), (10d, -100d)), MidpointRounding.AwayFromZero);
+        return (int)Math.Round(
+            InterpolateLinear(
+                temperature,
+                (MinTemperatureCelsius, 100d),
+                (10d, -100d),
+                (FinalVictoryTemperatureCelsius, -100d)),
+            MidpointRounding.AwayFromZero);
     }
 
     public int GetWaterTemperatureBonusPercent()
     {
         var temperature = EvaluateStat(Temperature).ToDouble();
-        return (int)Math.Round(InterpolateLinear(temperature, (-10d, -50d), (5d, 50d), (20d, -50d)), MidpointRounding.AwayFromZero);
+        return (int)Math.Round(
+            InterpolateLinear(
+                temperature,
+                (MinTemperatureCelsius, -50d),
+                (5d, 50d),
+                (FirstVictoryTemperatureCelsius, -50d),
+                (FinalVictoryTemperatureCelsius, -100d)),
+            MidpointRounding.AwayFromZero);
     }
 
     public int GetEnergyTemperatureBonusPercent()
@@ -1047,7 +1097,15 @@ public sealed class GameState
         if (temperature <= 0d)
             return 0;
 
-        return (int)Math.Round(InterpolateLinear(temperature, (0d, 0d), (5d, -50d), (10d, 0d), (20d, 100d)), MidpointRounding.AwayFromZero);
+        return (int)Math.Round(
+            InterpolateLinear(
+                temperature,
+                (0d, 0d),
+                (5d, -50d),
+                (10d, 0d),
+                (FirstVictoryTemperatureCelsius, 100d),
+                (FinalVictoryTemperatureCelsius, 300d)),
+            MidpointRounding.AwayFromZero);
     }
 
     public BigDouble EvaluateStat(Stat stat) => new EvaluationContext().Get(stat);

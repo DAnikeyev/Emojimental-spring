@@ -13,6 +13,10 @@
     overflow: hidden;
 }
 
+.victory-overlay--final {
+    background: rgba(40, 7, 0, 0.56);
+}
+
 .victory-background {
     position: absolute;
     top: 0;
@@ -80,6 +84,11 @@
     z-index: 10;
 }
 
+.victory-overlay--final .victory-card {
+    background: linear-gradient(180deg, #fff4ef, #ffd9cb);
+    box-shadow: 0 24px 60px rgba(97, 23, 2, 0.36);
+}
+
 @keyframes popIn {
     0% { transform: scale(0.5); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
@@ -94,6 +103,10 @@
     font-weight: 800;
     color: #1a2a5e;
     font-family: 'Courier New', Courier, monospace;
+}
+
+.victory-overlay--final .victory-timer {
+    color: #8a2615;
 }
 
 .victory-actions {
@@ -115,4 +128,13 @@
 .victory-button:hover {
     transform: scale(1.1);
     background: #e0e8ff;
+}
+
+.victory-overlay--final .victory-button {
+    background: #fff0e9;
+    border-color: #f5b39a;
+}
+
+.victory-overlay--final .victory-button:hover {
+    background: #ffd8ca;
 }
