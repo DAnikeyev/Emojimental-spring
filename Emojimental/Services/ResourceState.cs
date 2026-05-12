@@ -47,6 +47,6 @@ public sealed class ResourceState
     public void AddResource(ResourceType type, BigDouble delta)
     {
         var stat = GetStat(type);
-        stat.BaseValue += delta;
+        stat.BaseValue = BigDouble.Max(BigDouble.Zero, stat.BaseValue + delta);
     }
 }

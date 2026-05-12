@@ -222,13 +222,17 @@ public sealed class FieldNode
     public string TimeUpgradeCostDisplay()
         => GetTimeUpgradeCost().Display();
 
+    public bool CanUpgradeItem
+        => UpgradeLookup.CanUpgradeFactoryLevel(ItemLevel);
+
     public bool CanUpgradeTime
-        => UsesFlowerUpgrade || CooldownSeconds.BaseValue > MinCooldownSeconds;
+        => UpgradeLookup.CanUpgradeFactoryLevel(TimeLevel)
+           && (UsesFlowerUpgrade || CooldownSeconds.BaseValue > MinCooldownSeconds);
 
     public bool IsPaused { get; private set; }
     public bool IsActive { get; private set; } = true;
 
-    internal int Advance(double deltaSeconds, bool canProduce = true, EvaluationContext? ctx = null)
+    internal int Advance(double deltaSeconds, bool canProduce = true, int maxCompletedCycles = int.MaxValue, EvaluationContext? ctx = null)
     {
         if (IsPaused)
         {
@@ -237,7 +241,7 @@ public sealed class FieldNode
         }
 
         IsActive = canProduce;
-        if (!canProduce)
+        if (!canProduce || maxCompletedCycles <= 0)
             return 0;
 
         if (Type == FieldNodeType.Recycler && RecycleQueue <= 0)
@@ -261,7 +265,7 @@ public sealed class FieldNode
         var completedCycles = 0;
         if (Progress >= 1d)
         {
-            completedCycles = (int)Math.Floor(Progress);
+            completedCycles = Math.Min((int)Math.Floor(Progress), maxCompletedCycles);
             Progress -= completedCycles;
 
             if (Type == FieldNodeType.Recycler)
@@ -308,6 +312,8 @@ public sealed class FieldNode
 
     public void UpgradeItem()
     {
+        if (!CanUpgradeItem) return;
+
         ItemLevel += 1;
         OutputValue.BaseValue = UpgradeLookup.GetProductivity(Type, ItemLevel);
         InvalidateCache();

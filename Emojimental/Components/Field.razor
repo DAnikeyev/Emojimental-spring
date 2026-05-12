@@ -274,11 +274,23 @@
     private string GetBeamClasses(AlignmentBeam beam)
     {
         var orientationClass = beam.IsHorizontal ? string.Empty : " field-beam--vertical";
-        var slot = GameState.GetBeamStarSlot(beam.SourceFieldNodeId, beam.SourceSide);
-        if (slot?.HasStar != true)
+        var sourceSlot = GameState.GetBeamStarSlot(beam.SourceFieldNodeId, beam.SourceSide);
+        var targetSlot = GameState.GetBeamStarSlot(beam.TargetFieldNodeId, beam.TargetSide);
+
+        var hasAnyStar = sourceSlot?.HasStar == true || targetSlot?.HasStar == true;
+        if (!hasAnyStar)
             return $"field-beam{orientationClass}";
 
-        var rarityClass = slot.Star?.Type switch
+        var sourceStar = sourceSlot?.Star;
+        var targetStar = targetSlot?.Star;
+        var bestType = (sourceStar?.Type, targetStar?.Type) switch
+        {
+            (StarType.Legendary, _) or (_, StarType.Legendary) => StarType.Legendary,
+            (StarType.Blue, _) or (_, StarType.Blue) => StarType.Blue,
+            _ => StarType.Yellow
+        };
+
+        var rarityClass = bestType switch
         {
             StarType.Legendary => " field-beam--legendary",
             StarType.Blue => " field-beam--rare",

@@ -88,4 +88,39 @@ public class FieldNodeUpgradeTests
         Assert.False(node.CanUpgradeTime);
         Assert.Equal(0.1d, node.CooldownSeconds.BaseValue.ToDouble(), 5);
     }
+
+    [Fact]
+    public void FactoryUpgradeLookups_ScaleThroughLevelFiveHundred()
+    {
+        Assert.True(
+            UpgradeLookup.GetProductivity(FieldNodeType.Smelter, 500) >
+            UpgradeLookup.GetProductivity(FieldNodeType.Smelter, 499));
+
+        Assert.True(
+            UpgradeLookup.GetItemUpgradeCost(FieldNodeType.Smelter, 500) >
+            UpgradeLookup.GetItemUpgradeCost(FieldNodeType.Smelter, 499));
+
+        Assert.True(
+            UpgradeLookup.GetTimeUpgradeCost(FieldNodeType.Recycler, 500) >
+            UpgradeLookup.GetTimeUpgradeCost(FieldNodeType.Recycler, 499));
+    }
+
+    [Fact]
+    public void FactoryUpgrades_StopAtLevelFiveHundred()
+    {
+        var itemNode = new FieldNode(1, FieldNodeType.Smelter, 0, 0);
+        typeof(FieldNode).GetField("<ItemLevel>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(itemNode, UpgradeLookup.MaxFactoryUpgradeLevel);
+        itemNode.OutputValue.BaseValue = UpgradeLookup.GetProductivity(FieldNodeType.Smelter, UpgradeLookup.MaxFactoryUpgradeLevel);
+
+        Assert.False(itemNode.CanUpgradeItem);
+        itemNode.UpgradeItem();
+        Assert.Equal(UpgradeLookup.MaxFactoryUpgradeLevel, itemNode.ItemLevel);
+
+        var timeNode = new FieldNode(2, FieldNodeType.Farm, 0, 0);
+        typeof(FieldNode).GetField("<TimeLevel>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(timeNode, UpgradeLookup.MaxFactoryUpgradeLevel);
+
+        Assert.False(timeNode.CanUpgradeTime);
+        timeNode.UpgradeTime();
+        Assert.Equal(UpgradeLookup.MaxFactoryUpgradeLevel, timeNode.TimeLevel);
+    }
 }

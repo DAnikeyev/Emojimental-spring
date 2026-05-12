@@ -78,7 +78,7 @@
     private double GetVolume()
     {
         if (GameState.IsMuted) return 0;
-        return GameState.MusicVolume.BaseValue.ToDouble();
+        return GameState.MusicVolume;
     }
 
     private async Task ToggleMute()

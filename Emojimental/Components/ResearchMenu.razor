@@ -3,7 +3,7 @@
 @inject Services.GameState GameState
 
 <section class="left-sidebar__section left-sidebar__section--research">
-    @foreach (var research in GameState.Researches.Where(r => !GameState.HasResearch(r.Type)).Take(3))
+    @foreach (var research in GameState.VisibleResearches.Where(r => !GameState.HasResearch(r.Type)).Take(3))
     {
         <article class="left-sidebar__card left-sidebar__card--research left-sidebar__card--research-@research.CardModifier">
             <div class="left-sidebar__research-status" aria-hidden="true">

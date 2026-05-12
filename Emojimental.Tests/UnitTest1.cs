@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using BreakInfinity;
 using Emojimental.Models;
 using Emojimental.Services;
 
@@ -29,7 +30,10 @@ public class UnitTest1
                 ResearchType.UnlockFlowers,
                 ResearchType.UnlockPassiveGemSlots,
                 ResearchType.UnlockBurner,
-                ResearchType.UnlockGoal
+                ResearchType.UnlockGoal,
+                ResearchType.UnlockSecondActTemperatureRange,
+                ResearchType.UnlockSecondActHappinessRange,
+                ResearchType.UnlockSecondActGoal
             ],
             researches.Select(research => research.Type));
 
@@ -50,6 +54,9 @@ public class UnitTest1
         Assert.Equal(100000d, researches[14].Price.ToDouble(), 6);
         Assert.Equal(500000d, researches[15].Price.ToDouble(), 6);
         Assert.Equal(1000000d, researches[16].Price.ToDouble(), 6);
+        Assert.Equal(100000000d, researches[17].Price.ToDouble(), 6);
+        Assert.Equal(10000000000d, researches[18].Price.ToDouble(), 6);
+        Assert.Equal(1000000000000d, researches[19].Price.ToDouble(), 6);
 
         Assert.Equal($"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Goal)}", researches[16].EffectDisplay);
     }
@@ -182,6 +189,47 @@ public class UnitTest1
     }
 
     [Fact]
+    public void ExchangeUpgrades_StopAtLevelFiveHundred()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1_000_000;
+        gameState.BuyResearch(ResearchType.UnlockSaplings);
+        gameState.BuyResearch(ResearchType.UnlockStars);
+        gameState.BuyResearch(ResearchType.UnlockStarRecycler);
+        gameState.BuyResearch(ResearchType.UnlockWoodcutter);
+        gameState.BuyResearch(ResearchType.UnlockStarImprover);
+
+        gameState.Ice.BaseValue = new BigDouble(1, 5000);
+        gameState.Coin.BaseValue = new BigDouble(1, 5000);
+        gameState.StarDust.BaseValue = new BigDouble(1, 5000);
+        gameState.Wood.BaseValue = new BigDouble(1, 5000);
+
+        var resources = (ResourceState)typeof(GameState)
+            .GetField("_resources", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .GetValue(gameState)!;
+
+        resources.SnowmanCount = UpgradeLookup.MaxExchangeLevel - 1;
+        resources.SaplingCount = UpgradeLookup.MaxExchangeLevel - 1;
+        typeof(GameState)
+            .GetField("<StarUpgradeLevel>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(gameState, UpgradeLookup.MaxExchangeLevel - 1);
+
+        Assert.True(gameState.CanBuySnowman());
+        Assert.True(gameState.CanBuySapling());
+        Assert.True(gameState.CanUpgradeStars());
+
+        resources.SnowmanCount = UpgradeLookup.MaxExchangeLevel;
+        resources.SaplingCount = UpgradeLookup.MaxExchangeLevel;
+        typeof(GameState)
+            .GetField("<StarUpgradeLevel>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(gameState, UpgradeLookup.MaxExchangeLevel);
+
+        Assert.False(gameState.CanBuySnowman());
+        Assert.False(gameState.CanBuySapling());
+        Assert.False(gameState.CanUpgradeStars());
+    }
+
+    [Fact]
     public void ContinueVictory_SecondActStartsFromFirstVictoryTemperatureCap()
     {
         var gameState = new GameState();
@@ -208,7 +256,96 @@ public class UnitTest1
         Assert.Equal(GameState.FirstVictoryTemperatureCelsius, gameState.MaxTemperatureCelsius);
         Assert.Equal(GameState.FinalVictoryTemperatureCelsius, gameState.GoalTemperatureCelsius);
         Assert.Equal(GameState.FirstVictoryTemperatureCelsius, gameState.TemperatureCelsius);
+        Assert.Equal(GameState.FirstVictoryTemperatureCelsius, gameState.ThermometerMaxCelsius);
+        Assert.False(gameState.CanBuyTemperatureMax());
+        Assert.False(gameState.IsTemperatureGoalVisible());
+    }
+
+    [Fact]
+    public void TemperatureMaxCost_GrowsMoreAggressivelyPastTwentyCelsius()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1_000_000;
+
+        gameState.BuyResearch(ResearchType.UnlockTemperatureBar);
+        gameState.BuyResearch(ResearchType.UnlockTemperatureExchange);
+        gameState.Energy.BaseValue = 1e100;
+
+        while (gameState.MaxTemperatureCelsius < GameState.FirstVictoryTemperatureCelsius - 1)
+        {
+            gameState.BuyTemperatureMax();
+        }
+
+        var costToReach20 = gameState.GetTemperatureMaxCost();
+        gameState.BuyTemperatureMax();
+        var costToReach21 = gameState.GetTemperatureMaxCost();
+
+        Assert.True(costToReach21 / costToReach20 > new BigDouble(3));
+    }
+
+    [Fact]
+    public void SecondActResearches_AppearSequentiallyAfterContinuingVictory()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1e20;
+
+        gameState.ContinueVictory();
+
+        Assert.Contains(gameState.VisibleResearches, research => research.Type == ResearchType.UnlockSecondActTemperatureRange);
+        Assert.DoesNotContain(gameState.VisibleResearches, research => research.Type == ResearchType.UnlockSecondActHappinessRange);
+        Assert.DoesNotContain(gameState.VisibleResearches, research => research.Type == ResearchType.UnlockSecondActGoal);
+
+        gameState.BuyResearch(ResearchType.UnlockSecondActTemperatureRange);
+
+        Assert.Contains(gameState.VisibleResearches, research => research.Type == ResearchType.UnlockSecondActHappinessRange);
+        Assert.DoesNotContain(gameState.VisibleResearches, research => research.Type == ResearchType.UnlockSecondActGoal);
+
+        gameState.BuyResearch(ResearchType.UnlockSecondActHappinessRange);
+
+        Assert.Contains(gameState.VisibleResearches, research => research.Type == ResearchType.UnlockSecondActGoal);
+    }
+
+    [Fact]
+    public void SecondActResearches_GateThermometerHappinessAndFinalGoal()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1e20;
+
+        gameState.BuyResearch(ResearchType.UnlockTemperatureBar);
+        gameState.BuyResearch(ResearchType.UnlockTemperatureExchange);
+        gameState.BuyResearch(ResearchType.UnlockHappiness);
+        gameState.Energy.BaseValue = 1e100;
+        gameState.Carrot.BaseValue = new BigDouble(1, 50);
+        gameState.Flower.BaseValue = new BigDouble(1, 50);
+        gameState.Houses.BaseValue = new BigDouble(1, 50);
+
+        while (gameState.MaxTemperatureCelsius < GameState.FirstVictoryTemperatureCelsius)
+        {
+            gameState.BuyTemperatureMax();
+        }
+
+        gameState.ContinueVictory();
+
+        Assert.Equal(20, gameState.ThermometerMaxCelsius);
+        Assert.Equal(100, gameState.HappinessDisplayMax);
+        Assert.False(gameState.CanBuyTemperatureMax());
+        Assert.False(gameState.IsTemperatureGoalVisible());
+        Assert.Equal("😊", EmojiBank.Happiness(gameState.HappinessDisplayMax - 1));
+        Assert.Equal("😄", EmojiBank.Happiness(100));
+        Assert.Equal("😁", EmojiBank.Happiness(120));
+
+        gameState.BuyResearch(ResearchType.UnlockSecondActTemperatureRange);
+
+        Assert.Equal(40, gameState.ThermometerMaxCelsius);
         Assert.True(gameState.CanBuyTemperatureMax());
+
+        gameState.BuyResearch(ResearchType.UnlockSecondActHappinessRange);
+
+        Assert.Equal(140, gameState.HappinessDisplayMax);
+
+        gameState.BuyResearch(ResearchType.UnlockSecondActGoal);
+
+        Assert.True(gameState.IsTemperatureGoalVisible());
     }
 
     [Fact]
@@ -218,6 +355,31 @@ public class UnitTest1
 
         Assert.Equal(80, gameState.StarInventory.Count);
         Assert.Equal(3, gameState.StarInventory.Count(slot => slot.HasStar));
+    }
+
+    [Fact]
+    public void PassiveStatStarSlots_DisableStarsPassivePlacement()
+    {
+        var gameState = new GameState();
+        gameState.ResearchPoint.BaseValue = 1_000_000;
+
+        gameState.BuyResearch(ResearchType.UnlockStars);
+        gameState.BuyResearch(ResearchType.UnlockPassiveGemSlots);
+
+        var starsSlot = gameState.PassiveStatStarSlots.Single(s => s.Type == PassiveStatType.Stars);
+        var inventorySlotIndex = gameState.StarInventory
+            .Select((slot, index) => new { slot, index })
+            .First(x => x.slot.HasStar)
+            .index;
+
+        Assert.False(starsSlot.IsEnabled);
+
+        gameState.BeginStarDrag(inventorySlotIndex);
+
+        Assert.False(gameState.CanPlacePassiveStatStar(PassiveStatType.Stars));
+        Assert.False(gameState.TryPlacePassiveStatStar(PassiveStatType.Stars));
+        Assert.True(gameState.StarInventory[inventorySlotIndex].HasStar);
+        Assert.Null(starsSlot.Star);
     }
 
     [Fact]

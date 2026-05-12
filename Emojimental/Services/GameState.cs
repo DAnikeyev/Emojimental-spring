@@ -14,6 +14,8 @@ public enum HoverSide
 
 public sealed class GameState
 {
+    public const double MaxMusicVolume = 1d;
+
     private const double Log10Of2 = 0.3010299956639812d;
     private const double UiUpdateIntervalSeconds = 1d / 60d;
     private const int StarInventorySize = 80;
@@ -70,6 +72,16 @@ public sealed class GameState
     }
 
     public int GoalTemperatureCelsius => VictoryContinued ? FinalVictoryTemperatureCelsius : FirstVictoryTemperatureCelsius;
+    public int ThermometerMaxCelsius
+        => VictoryContinued && HasResearch(ResearchType.UnlockSecondActTemperatureRange)
+            ? FinalVictoryTemperatureCelsius
+            : FirstVictoryTemperatureCelsius;
+    public int TemperatureExchangeLimitCelsius
+        => VictoryContinued && !HasResearch(ResearchType.UnlockSecondActTemperatureRange)
+            ? FirstVictoryTemperatureCelsius
+            : GoalTemperatureCelsius;
+    public int HappinessDisplayMax
+        => VictoryContinued && HasResearch(ResearchType.UnlockSecondActHappinessRange) ? 140 : 100;
 
     public string MixColor(int startR, int startG, int startB, int endR, int endG, int endB, double progress, double alpha = 1d)
     {
@@ -130,7 +142,7 @@ public sealed class GameState
     public Stat StarDust => _resources.StarDust;
     public Stat Snowman { get; } = new();
     public Stat RecycledStars { get; } = new();
-    public Stat MusicVolume { get; } = new() { BaseValue = 0.2 };
+    public double MusicVolume { get; private set; } = MaxMusicVolume * 0.05d;
     public bool Cheats { get; set; } = false; // testing
     public bool ParticlesEnabled { get; set; } = false;
     public double GameSpeed { get; set; } = 1.0;
@@ -185,6 +197,11 @@ public sealed class GameState
 
     public bool CanAdjustTemperature() => HasResearch(ResearchType.UnlockTemperatureBar);
 
+    public bool IsTemperatureGoalVisible()
+        => VictoryContinued
+            ? HasResearch(ResearchType.UnlockSecondActGoal)
+            : HasResearch(ResearchType.UnlockGoal);
+
     public double GetFlowerProbability(FieldNode node)
         => HasResearch(ResearchType.UnlockFlowers) ? node.EvaluateFlowerProbability().ToDouble() : 0.0;
 
@@ -218,6 +235,8 @@ public sealed class GameState
     public IReadOnlyList<StarInventorySlot> StarInventory => _starInventory;
     public IReadOnlyCollection<ResearchType> OwnedResearch => _research.OwnedResearch;
     public IReadOnlyList<ResearchDefinition> Researches => ResearchCatalog.All;
+    public IReadOnlyList<ResearchDefinition> VisibleResearches
+        => ResearchCatalog.All.Where(research => IsResearchVisible(research.Type)).ToList();
     public IReadOnlyList<PassiveStatStarSlot> PassiveStatStarSlots => _passiveStatStarSlots;
 
     public FieldNode? SelectedFieldObject => _field.SelectedFieldObject;
@@ -286,15 +305,15 @@ public sealed class GameState
         BigDouble prodMult = 1;
         if (type == StarType.Yellow || type == StarType.Legendary)
         {
-            var w = MathHelper.NextGamma(2.0, Math.Max(0.001, statH / 10.0));
-            var value = Math.Max(1.5, Math.Pow(1.3, w));
+            var w = MathHelper.NextGamma(2.0, Math.Max(0.001, statH / 15.0));
+            var value = Math.Max(1.2, Math.Pow(1.15, w));
             prodMult = new BigDouble(value);
         }
 
         double cdReduction = 0;
         if (type == StarType.Blue || type == StarType.Legendary)
         {
-            var w = MathHelper.NextGamma(2.0, Math.Max(0.001, statH / 10.0)) / 10.0;
+            var w = MathHelper.NextGamma(2.0, Math.Max(0.001, statH / 15.0)) / 10.0;
             cdReduction = Math.Max(0.1, w);
         }
 
@@ -357,6 +376,7 @@ public sealed class GameState
 
         var generatedResources = new Dictionary<ResourceType, BigDouble>();
         var consumedResources = new Dictionary<ResourceType, BigDouble>();
+        var remainingResources = new Dictionary<ResourceType, BigDouble>();
 
         var structureBuilt = new List<(int Type, BigDouble Amount)>();
 
@@ -366,21 +386,23 @@ public sealed class GameState
         var iceMult = IceMultiplier;
         var recycledStarsVal = ctx.Get(RecycledStars);
         
+        BigDouble GetRemainingResource(ResourceType type)
+        {
+            if (remainingResources.TryGetValue(type, out var amount))
+                return amount;
+
+            amount = _resources.GetResource(type, ctx);
+            remainingResources[type] = amount;
+            return amount;
+        }
+
         foreach (var fieldObject in FieldObjects)
         {
-            var consumption = GetDynamicConsumption(fieldObject);
-            var canProduce = true;
-            foreach (var (resType, amount) in consumption)
-            {
-                var currentAmount = _resources.GetResource(resType, ctx);
-                if (currentAmount < amount)
-                {
-                    canProduce = false;
-                    break;
-                }
-            }
-
-            var completedCycles = fieldObject.Advance(deltaSeconds, canProduce, ctx);
+            var consumption = GetDynamicConsumption(fieldObject)
+                .Where(entry => entry.Amount > BigDouble.Zero)
+                .ToArray();
+            var maxAffordableCycles = GetMaxAffordableCycles(consumption, GetRemainingResource);
+            var completedCycles = fieldObject.Advance(deltaSeconds, maxAffordableCycles > 0, maxAffordableCycles, ctx);
             if (completedCycles <= 0)
                 continue;
 
@@ -390,6 +412,7 @@ public sealed class GameState
             // Consume resources if produced
             foreach (var (resType, amount) in consumption)
             {
+                remainingResources[resType] = BigDouble.Max(BigDouble.Zero, GetRemainingResource(resType) - (amount * completedCycles));
                 consumedResources.TryAdd(resType, BigDouble.Zero);
                 consumedResources[resType] += amount * completedCycles;
             }
@@ -494,6 +517,64 @@ public sealed class GameState
 
         _pendingSlowPassiveRefreshSeconds = 0d;
         RefreshHappiness();
+    }
+
+    private static int GetMaxAffordableCycles(
+        IReadOnlyList<(ResourceType Type, BigDouble Amount)> consumption,
+        Func<ResourceType, BigDouble> getAvailableResource)
+    {
+        if (consumption.Count == 0)
+            return int.MaxValue;
+
+        var maxAffordableCycles = int.MaxValue;
+        foreach (var (type, amount) in consumption)
+        {
+            if (amount <= BigDouble.Zero)
+                continue;
+
+            var affordableCycles = GetAffordableCycleLimit(getAvailableResource(type), amount);
+            if (affordableCycles <= 0)
+                return 0;
+
+            maxAffordableCycles = Math.Min(maxAffordableCycles, affordableCycles);
+        }
+
+        return maxAffordableCycles;
+    }
+
+    private static int GetAffordableCycleLimit(BigDouble available, BigDouble amountPerCycle)
+    {
+        if (amountPerCycle <= BigDouble.Zero)
+            return int.MaxValue;
+
+        if (available < amountPerCycle)
+            return 0;
+
+        var low = 1;
+        var high = 2;
+        while (high < int.MaxValue / 2 && amountPerCycle * high <= available)
+        {
+            low = high;
+            high *= 2;
+        }
+
+        if (amountPerCycle * high <= available)
+            return int.MaxValue;
+
+        while (low < high)
+        {
+            var mid = low + ((high - low + 1) / 2);
+            if (amountPerCycle * mid <= available)
+            {
+                low = mid;
+            }
+            else
+            {
+                high = mid - 1;
+            }
+        }
+
+        return low;
     }
 
     private void RefreshHappiness()
@@ -658,6 +739,7 @@ public sealed class GameState
     public bool CanUpgradeSelectedFieldObjectItem()
     {
         if (SelectedFieldObject is null) return false;
+        if (!SelectedFieldObject.CanUpgradeItem) return false;
         var cost = SelectedFieldObject.GetItemUpgradeCost();
         var costResource = ResourceType.Coin;
         return GetResource(costResource) >= cost;
@@ -666,6 +748,7 @@ public sealed class GameState
     public void UpgradeSelectedFieldObjectItem()
     {
         if (SelectedFieldObject is null) return;
+        if (!SelectedFieldObject.CanUpgradeItem) return;
         var cost = SelectedFieldObject.GetItemUpgradeCost();
         
         var costResource = ResourceType.Coin;
@@ -716,12 +799,14 @@ public sealed class GameState
         return ApplyExchangeMarketModifier(cost);
     }
 
-    public bool CanBuySnowman() => EvaluateStat(Ice) >= GetSnowmanCost();
+    public bool CanBuySnowman()
+        => UpgradeLookup.CanBuyExchangeLevel(SnowmanCount)
+           && EvaluateStat(Ice) >= GetSnowmanCost();
 
     public void BuySnowman()
     {
+        if (!CanBuySnowman()) return;
         var cost = GetSnowmanCost();
-        if (EvaluateStat(Ice) < cost) return;
 
         _resources.AddResource(ResourceType.Ice, -cost);
         _resources.SnowmanCount++;
@@ -768,14 +853,15 @@ public sealed class GameState
         return GetResource(costResource) >= cost;
     }
 
-    public bool CanBuySapling() => HasResearch(ResearchType.UnlockSaplings) && EvaluateStat(Coin) >= GetSaplingCost();
+    public bool CanBuySapling()
+        => HasResearch(ResearchType.UnlockSaplings)
+           && UpgradeLookup.CanBuyExchangeLevel(SaplingCount)
+           && EvaluateStat(Coin) >= GetSaplingCost();
 
     public void BuySapling()
     {
-        if (!HasResearch(ResearchType.UnlockSaplings)) return;
-
+        if (!CanBuySapling()) return;
         var cost = GetSaplingCost();
-        if (EvaluateStat(Coin) < cost) return;
 
         _resources.AddResource(ResourceType.Coin, -cost);
         _resources.SaplingCount++;
@@ -788,13 +874,22 @@ public sealed class GameState
     public BigDouble GetTemperatureMaxCost()
     {
         var cost = UpgradeLookup.GetTemperatureMaxCost(MaxTemperatureCelsius - InitialMaxTemperatureCelsius);
+
+        if (MaxTemperatureCelsius >= FirstVictoryTemperatureCelsius)
+        {
+            // The second act should feel meaningfully steeper once the cap pushes past 20C.
+            var extraHeatLevels = MaxTemperatureCelsius - FirstVictoryTemperatureCelsius + 1;
+            cost *= Pow(new BigDouble(2.5), extraHeatLevels);
+        }
+
         return ApplyExchangeMarketModifier(cost);
     }
 
     public bool CanBuyTemperatureMax()
         => HasResearch(ResearchType.UnlockTemperatureBar)
            && HasResearch(ResearchType.UnlockTemperatureExchange)
-           && MaxTemperatureCelsius < GoalTemperatureCelsius
+           && UpgradeLookup.CanBuyExchangeLevel(MaxTemperatureCelsius - InitialMaxTemperatureCelsius)
+           && MaxTemperatureCelsius < TemperatureExchangeLimitCelsius
            && EvaluateStat(Energy) >= GetTemperatureMaxCost();
 
     public void BuyTemperatureMax()
@@ -824,9 +919,22 @@ public sealed class GameState
 
     public bool HasResearch(ResearchType type) => _research.HasResearch(type);
 
+    private bool IsResearchVisible(ResearchType type)
+        => type switch
+        {
+            ResearchType.UnlockGoal => !VictoryContinued,
+            ResearchType.UnlockSecondActTemperatureRange => VictoryContinued,
+            ResearchType.UnlockSecondActHappinessRange
+                => VictoryContinued && HasResearch(ResearchType.UnlockSecondActTemperatureRange),
+            ResearchType.UnlockSecondActGoal
+                => VictoryContinued && HasResearch(ResearchType.UnlockSecondActHappinessRange),
+            _ => true
+        };
+
     public bool CanBuyResearch(ResearchType type)
     {
         if (HasResearch(type)) return false;
+        if (!IsResearchVisible(type)) return false;
         var definition = ResearchCatalog.Get(type);
         return GetResource(definition.PriceResource) >= definition.Price;
     }
@@ -834,6 +942,7 @@ public sealed class GameState
     public void BuyResearch(ResearchType type)
     {
         if (HasResearch(type)) return;
+        if (!IsResearchVisible(type)) return;
         var definition = ResearchCatalog.Get(type);
         if (GetResource(definition.PriceResource) < definition.Price) return;
 
@@ -1104,7 +1213,7 @@ public sealed class GameState
 
     public void SetMusicVolume(double volume)
     {
-        MusicVolume.BaseValue = Math.Clamp(volume, 0, 1);
+        MusicVolume = Math.Clamp(volume, 0d, MaxMusicVolume);
         Changed?.Invoke();
         RequestUiUpdate?.Invoke();
     }
@@ -1303,7 +1412,7 @@ public sealed class GameState
     public bool CanPlacePassiveStatStar(PassiveStatType type)
         => IsPassiveStatStarSlotsUnlocked()
            && DraggingStarSlotIndex is not null
-           && _passiveStatStarSlots.Any(s => s.Type == type);
+           && _passiveStatStarSlots.Any(s => s.Type == type && s.IsEnabled);
 
     public bool TryPlacePassiveStatStar(PassiveStatType type)
     {
@@ -1320,7 +1429,7 @@ public sealed class GameState
             return false;
         }
 
-        var slotIndex = _passiveStatStarSlots.FindIndex(s => s.Type == type);
+        var slotIndex = _passiveStatStarSlots.FindIndex(s => s.Type == type && s.IsEnabled);
         if (slotIndex < 0)
             return false;
 
@@ -1346,7 +1455,7 @@ public sealed class GameState
     {
         foreach (var type in Enum.GetValues<PassiveStatType>())
         {
-            var stars = _passiveStatStarSlots.Where(s => s.Type == type && s.Star != null).ToList();
+            var stars = _passiveStatStarSlots.Where(s => s.Type == type && s.IsEnabled && s.Star != null).ToList();
             var multiplier = BigDouble.One;
             foreach (var s in stars)
             {
@@ -1420,6 +1529,7 @@ public sealed class GameState
            && HasResearch(ResearchType.UnlockStarImprover)
            && HasResearch(ResearchType.UnlockStarRecycler)
            && HasResearch(ResearchType.UnlockWoodcutter)
+           && UpgradeLookup.CanBuyExchangeLevel(StarUpgradeLevel)
            && GetResource(ResourceType.StarDust) >= GetStarUpgradeCost()
            && GetResource(ResourceType.Wood) >= GetStarUpgradeCost();
 

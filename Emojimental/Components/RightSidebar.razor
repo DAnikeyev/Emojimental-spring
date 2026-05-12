@@ -72,8 +72,10 @@
         {
             var happinessValue = GameState.EvaluatePassiveStat(PassiveStatType.Happiness).ToDouble();
             var logValue = Math.Log2(happinessValue + 1);
-            var cappedHappiness = Math.Min(logValue, 100);
+            var happinessMax = GameState.HappinessDisplayMax;
+            var cappedHappiness = Math.Min(logValue, happinessMax);
             var happinessPercent = cappedHappiness.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+            var happinessFillWidth = FormattableString.Invariant($"{(cappedHappiness / happinessMax) * 100d:F0}%");
 
             <div class="right-sidebar__passive-row right-sidebar__passive-row--happiness"
                  aria-label="@EmojiBank.Resource(ResourceType.Happiness) stat"
@@ -83,10 +85,7 @@
                 <span class="right-sidebar__passive-emoji">@EmojiBank.Happiness(cappedHappiness)</span>
                 <div class="right-sidebar__happiness-container">
                     <div class="right-sidebar__happiness-bar">
-                        @{
-                            var width = happinessPercent + "%";
-                        }
-                        <div class="right-sidebar__happiness-fill" style="width: @width"></div>
+                        <div class="right-sidebar__happiness-fill" style="width: @happinessFillWidth"></div>
                     </div>
                     <span class="right-sidebar__passive-value">
                         @happinessPercent
@@ -108,7 +107,8 @@
             var carrotsType = PassiveStatType.Carrots;
             var carrotsStarSlot = GameState.PassiveStatStarSlots.First(s => s.Type == carrotsType);
             var carrotsHasStar = carrotsStarSlot.HasStar;
-            var carrotsCanDrop = GameState.CanPlacePassiveStatStar(carrotsType);
+            var carrotsShowStarSlot = GameState.IsPassiveStatStarSlotsUnlocked() && carrotsStarSlot.IsEnabled;
+            var carrotsCanDrop = carrotsShowStarSlot && GameState.CanPlacePassiveStatStar(carrotsType);
             var carrotsSlotClasses = $"right-sidebar__passive-star{(carrotsHasStar ? " right-sidebar__passive-star--filled" : string.Empty)}{(carrotsCanDrop ? " right-sidebar__passive-star--drop-target" : string.Empty)}";
             var carrotsStat = GameState.GetStatForPassive(carrotsType);
 
@@ -119,7 +119,7 @@
                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
                 <span class="right-sidebar__passive-emoji">@carrotsType.Emoji()</span>
                 <span class="right-sidebar__passive-value">@GameState.EvaluatePassiveStat(carrotsType).Display() <span class="right-sidebar__base-value">(@carrotsStat.BaseValue.Display())</span></span>
-                @if (GameState.IsPassiveStatStarSlotsUnlocked())
+                @if (carrotsShowStarSlot)
                 {
                     <div class="@carrotsSlotClasses"
                          @ondragover:preventDefault="true"
@@ -145,7 +145,8 @@
             var housesType = PassiveStatType.Houses;
             var housesStarSlot = GameState.PassiveStatStarSlots.First(s => s.Type == housesType);
             var housesHasStar = housesStarSlot.HasStar;
-            var housesCanDrop = GameState.CanPlacePassiveStatStar(housesType);
+            var housesShowStarSlot = GameState.IsPassiveStatStarSlotsUnlocked() && housesStarSlot.IsEnabled;
+            var housesCanDrop = housesShowStarSlot && GameState.CanPlacePassiveStatStar(housesType);
             var housesSlotClasses = $"right-sidebar__passive-star{(housesHasStar ? " right-sidebar__passive-star--filled" : string.Empty)}{(housesCanDrop ? " right-sidebar__passive-star--drop-target" : string.Empty)}";
             var housesStat = GameState.GetStatForPassive(housesType);
 
@@ -163,7 +164,7 @@
                 {
                     <span class="right-sidebar__passive-value">@EmojiBank.Symbol(SymbolType.Locked)</span>
                 }
-                @if (GameState.IsPassiveStatStarSlotsUnlocked())
+                @if (housesShowStarSlot)
                 {
                     <div class="@housesSlotClasses"
                          @ondragover:preventDefault="true"
@@ -189,7 +190,8 @@
             var flowersType = PassiveStatType.Flower;
             var flowersStarSlot = GameState.PassiveStatStarSlots.First(s => s.Type == flowersType);
             var flowersHasStar = flowersStarSlot.HasStar;
-            var flowersCanDrop = GameState.CanPlacePassiveStatStar(flowersType);
+            var flowersShowStarSlot = GameState.IsPassiveStatStarSlotsUnlocked() && flowersStarSlot.IsEnabled;
+            var flowersCanDrop = flowersShowStarSlot && GameState.CanPlacePassiveStatStar(flowersType);
             var flowersSlotClasses = $"right-sidebar__passive-star{(flowersHasStar ? " right-sidebar__passive-star--filled" : string.Empty)}{(flowersCanDrop ? " right-sidebar__passive-star--drop-target" : string.Empty)}";
             var flowersStat = GameState.GetStatForPassive(flowersType);
 
@@ -207,7 +209,7 @@
                 {
                     <span class="right-sidebar__passive-value">@EmojiBank.Symbol(SymbolType.Locked)</span>
                 }
-                @if (GameState.IsPassiveStatStarSlotsUnlocked())
+                @if (flowersShowStarSlot)
                 {
                     <div class="@flowersSlotClasses"
                          @ondragover:preventDefault="true"
@@ -231,14 +233,14 @@
         }
 
         @* Other passive stats (original loop, excluding Happiness, Carrots, Houses, Flower) *@
-        @foreach (var type in new[] { PassiveStatType.Snowman, PassiveStatType.Seeds, PassiveStatType.Markets, PassiveStatType.Stars, PassiveStatType.RecycledStars })
+        @foreach (var type in new[] { PassiveStatType.Snowman, PassiveStatType.Seeds, PassiveStatType.Markets, PassiveStatType.RecycledStars })
         {
             if (!GameState.IsPassiveStatUnlocked(type)) continue;
-            if (type == PassiveStatType.Stars && !GameState.HasResearch(ResearchType.UnlockStars)) continue;
 
             var starSlot = GameState.PassiveStatStarSlots.First(s => s.Type == type);
             var hasStar = starSlot.HasStar;
-            var canDrop = GameState.CanPlacePassiveStatStar(type);
+            var showStarSlot = GameState.IsPassiveStatStarSlotsUnlocked() && starSlot.IsEnabled;
+            var canDrop = showStarSlot && GameState.CanPlacePassiveStatStar(type);
             var slotClasses = $"right-sidebar__passive-star{(hasStar ? " right-sidebar__passive-star--filled" : string.Empty)}{(canDrop ? " right-sidebar__passive-star--drop-target" : string.Empty)}";
             var stat = GameState.GetStatForPassive(type);
             var description = type switch
@@ -259,7 +261,7 @@
                  @onmouseleave="@(e => GameState.SetHoveredPassiveStat(null))">
                 <span class="right-sidebar__passive-emoji">@type.Emoji()</span>
                 <span class="right-sidebar__passive-value">@GameState.EvaluatePassiveStat(type).Display() <span class="right-sidebar__base-value">(@stat.BaseValue.Display())</span></span>
-                @if (GameState.IsPassiveStatStarSlotsUnlocked())
+                @if (showStarSlot)
                 {
                     <div class="@slotClasses"
                          @ondragover:preventDefault="true"

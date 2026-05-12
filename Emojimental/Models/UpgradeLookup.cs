@@ -4,7 +4,9 @@ namespace Emojimental.Models;
 
 public static class UpgradeLookup
 {
-    private const int MaxLevel = 100;
+    public const int MaxFactoryUpgradeLevel = 500;
+    public const int MaxExchangeLevel = 500;
+    private const int MaxLevel = MaxFactoryUpgradeLevel;
     private static readonly Dictionary<int, BigDouble> _itemUpgradeCosts = new();
     private static readonly Dictionary<int, BigDouble> _timeUpgradeCosts = new();
     private static readonly Dictionary<int, BigDouble> _snowmanCosts = new();
@@ -128,7 +130,7 @@ public static class UpgradeLookup
             _energyItemUpgradeCosts[i] = energyItemCost;
             energyItemCost = Floor(energyItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _energyTimeUpgradeCosts[i] = energyTimeCost;
-            energyTimeCost *= 1.7;
+            energyTimeCost = ScaleCooldownUpgradeCost(energyTimeCost, 1.7, i);
 
             // Snow (Shovel)
             _snowProductivityValues[i] = snowProductivity;
@@ -136,7 +138,7 @@ public static class UpgradeLookup
             _snowItemUpgradeCosts[i] = snowItemCost;
             snowItemCost = Floor(snowItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _snowTimeUpgradeCosts[i] = snowTimeCost;
-            snowTimeCost *= 1.7;
+            snowTimeCost = ScaleCooldownUpgradeCost(snowTimeCost, 1.7, i);
 
             // Researcher Productivity: f(n+1)=FLOOR((f(n)+1)*1.3)
             _researcherProductivityValues[i] = resProductivity;
@@ -162,16 +164,17 @@ public static class UpgradeLookup
             _dustBreakerItemUpgradeCosts[i] = dustBreakerItemCost;
             dustBreakerItemCost = Floor(dustBreakerItemCost * Math.Pow(1.4, 1 + 0.05 * (i + 1)));
 
-            // Researcher Cooldown Upgrade cost (Dust): 2 * 1.9^n
-            _researcherTimeUpgradeCosts[i] = 2 * Math.Pow(1.9, i);
+            // Researcher Cooldown Upgrade cost (Dust): each level scales a bit harder than the last.
+            _researcherTimeUpgradeCosts[i] = resTimeCost;
+            resTimeCost = ScaleCooldownUpgradeCost(resTimeCost, 1.9, i, roundDown: true);
 
             // Smelter Cooldown Upgrade cost (Stardust): lvl1=2, f(n) = f(n-1)*1.7
             _smelterTimeUpgradeCosts[i] = smelterTimeCost;
-            smelterTimeCost *= 1.7;
+            smelterTimeCost = ScaleCooldownUpgradeCost(smelterTimeCost, 1.7, i);
 
             // Dust Breaker Cooldown Upgrade cost (Stardust): lvl1=5, f(n) = f(n-1)*1.9
             _dustBreakerTimeUpgradeCosts[i] = dustBreakerTimeCost;
-            dustBreakerTimeCost *= 1.9;
+            dustBreakerTimeCost = ScaleCooldownUpgradeCost(dustBreakerTimeCost, 1.9, i);
 
             // Farm Productivity: f(n)=f(n-1)*1.1 starting from 1
             _farmProductivityValues[i] = farmProductivity;
@@ -183,7 +186,7 @@ public static class UpgradeLookup
 
             // Farm Cooldown Upgrade cost (Stardust): lvl1=10, f(n) = f(n-1)*1.9
             _farmTimeUpgradeCosts[i] = farmTimeCost;
-            farmTimeCost *= 1.9;
+            farmTimeCost = ScaleCooldownUpgradeCost(farmTimeCost, 1.9, i);
 
             // Woodcutter Productivity: f(n)=f(n-1)*1.2 starting from 10
             _woodcutterProductivityValues[i] = woodcutterProductivity;
@@ -195,7 +198,7 @@ public static class UpgradeLookup
 
             // Woodcutter Cooldown Upgrade cost (Stardust): lvl1=50, f(n) = f(n-1)*1.7
             _woodcutterTimeUpgradeCosts[i] = woodcutterTimeCost;
-            woodcutterTimeCost *= 1.7;
+            woodcutterTimeCost = ScaleCooldownUpgradeCost(woodcutterTimeCost, 1.7, i);
 
             // Builder Productivity: f(n)=f(n-1)*1.2 starting from 1
             _builderProductivityValues[i] = builderProductivity;
@@ -207,7 +210,7 @@ public static class UpgradeLookup
 
             // Builder Cooldown Upgrade cost (Stardust): lvl1=100, f(n) = f(n-1)*1.6
             _builderTimeUpgradeCosts[i] = builderTimeCost;
-            builderTimeCost *= 1.6;
+            builderTimeCost = ScaleCooldownUpgradeCost(builderTimeCost, 1.6, i);
 
             // Garden
             _gardenProductivityValues[i] = gardenProductivity;
@@ -215,7 +218,7 @@ public static class UpgradeLookup
             _gardenItemUpgradeCosts[i] = gardenItemCost;
             gardenItemCost = Floor(gardenItemCost * Math.Pow(1.3, 1 + 0.05 * (i + 1)));
             _gardenTimeUpgradeCosts[i] = gardenTimeCost;
-            gardenTimeCost *= 1.8;
+            gardenTimeCost = ScaleCooldownUpgradeCost(gardenTimeCost, 1.8, i);
 
             // Bonfire
             _bonfireProductivityValues[i] = bonfireProductivity;
@@ -223,7 +226,7 @@ public static class UpgradeLookup
             _bonfireItemUpgradeCosts[i] = bonfireItemCost;
             bonfireItemCost = Floor(bonfireItemCost * 1.4);
             _bonfireTimeUpgradeCosts[i] = bonfireTimeCost;
-            bonfireTimeCost = Floor(bonfireTimeCost * 1.8);
+            bonfireTimeCost = ScaleCooldownUpgradeCost(bonfireTimeCost, 1.8, i, roundDown: true);
 
             // Recycler
             _recyclerProductivityValues[i] = recyclerProductivity;
@@ -231,7 +234,7 @@ public static class UpgradeLookup
             _recyclerItemUpgradeCosts[i] = recyclerItemCost;
             recyclerItemCost = Floor(recyclerItemCost * Math.Pow(2.0, 1 + 0.1 * (i + 1)));
             _recyclerTimeUpgradeCosts[i] = recyclerTimeCost;
-            recyclerTimeCost *= 1.9;
+            recyclerTimeCost = ScaleCooldownUpgradeCost(recyclerTimeCost, 1.9, i);
 
             // Upgrade cost for items = x^(2.1) for level x, rounded down.
             _itemUpgradeCosts[i] = new BigDouble(Math.Floor(Math.Pow(i, 2.1)));
@@ -450,6 +453,12 @@ public static class UpgradeLookup
         return GetFieldNodeCost(count);
     }
 
+    public static bool CanUpgradeFactoryLevel(int currentLevel)
+        => currentLevel < MaxFactoryUpgradeLevel;
+
+    public static bool CanBuyExchangeLevel(int currentCount)
+        => currentCount < MaxExchangeLevel;
+
     public static BigDouble GetFieldNodeCost(int count)
     {
         var level = count + 1;
@@ -473,6 +482,12 @@ public static class UpgradeLookup
     private static BigDouble Floor(BigDouble value)
     {
         return BreakInfinity.BigDouble.Floor(value);
+    }
+
+    private static BigDouble ScaleCooldownUpgradeCost(BigDouble currentCost, double baseMultiplier, int level, bool roundDown = false)
+    {
+        var scaledCost = currentCost * (baseMultiplier + 0.1 * Math.Max(level - 1, 0));
+        return roundDown ? Floor(scaledCost) : scaledCost;
     }
 
     private static BigDouble Pow2(int exponent)

@@ -8,7 +8,7 @@
         @if (GameState.CanAdjustTemperature())
         {
             <div class="temperature-sidebar__slider-shell">
-                @if (GameState.HasResearch(ResearchType.UnlockGoal))
+                @if (GameState.IsTemperatureGoalVisible())
                 {
                     <div class="temperature-sidebar__goal" aria-label="Final goal">
                         <span class="temperature-sidebar__goal-icon">@EmojiBank.Symbol(SymbolType.Goal)</span>
@@ -90,7 +90,7 @@
     private const int SliderMin = GameState.MinTemperatureCelsius;
     private static readonly DateTime GameStartDate = new(2026, 4, 1);
     private static readonly DateTime GameEndDate = new(2026, 5, 31);
-    private int SliderMax => GameState.GoalTemperatureCelsius;
+    private int SliderMax => GameState.ThermometerMaxCelsius;
 
     private ElementReference _trackRef;
     private TrackBounds? _dragBounds;

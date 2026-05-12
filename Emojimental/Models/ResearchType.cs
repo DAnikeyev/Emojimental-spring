@@ -20,7 +20,10 @@ public enum ResearchType
     UnlockFlowers,
     UnlockPassiveGemSlots,
     UnlockBurner,
-    UnlockGoal
+    UnlockGoal,
+    UnlockSecondActTemperatureRange,
+    UnlockSecondActHappinessRange,
+    UnlockSecondActGoal
 }
 
 public sealed record ResearchDefinition(
@@ -135,7 +138,25 @@ public static class ResearchCatalog
             ResourceType.ResearchPoint,
             new BigDouble(1000000),
             $"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Goal)}",
-            "goal")
+            "goal"),
+        new(
+            ResearchType.UnlockSecondActTemperatureRange,
+            ResourceType.ResearchPoint,
+            new BigDouble(100000000),
+            $"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Temperature)}20{EmojiBank.Symbol(SymbolType.Arrow)}40",
+            "second-act-temperature"),
+        new(
+            ResearchType.UnlockSecondActHappinessRange,
+            ResourceType.ResearchPoint,
+            new BigDouble(10000000000),
+            $"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Resource(ResourceType.Happiness)}140",
+            "second-act-happiness"),
+        new(
+            ResearchType.UnlockSecondActGoal,
+            ResourceType.ResearchPoint,
+            new BigDouble(1000000000000),
+            $"{EmojiBank.Symbol(SymbolType.Plus)}{EmojiBank.Symbol(SymbolType.Goal)}40{EmojiBank.Symbol(SymbolType.Temperature)}",
+            "second-act-goal")
     ];
 
     public static ResearchDefinition Get(ResearchType type)
